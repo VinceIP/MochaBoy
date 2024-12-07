@@ -4,6 +4,7 @@ public class CPU {
 
     private Memory memory;
     private Registers registers;
+    private long tStateCounter;
 
     public CPU(Memory memory) {
         this.memory = memory;
@@ -40,6 +41,18 @@ public class CPU {
 
     public Registers getRegisters() {
         return registers;
+    }
+
+    public long getTStateCounter() {
+        return tStateCounter;
+    }
+
+    public void settStateCounter(long value) {
+        this.tStateCounter = value;
+    }
+
+    public void incrementTStateCounter(long value) {
+        this.tStateCounter += value;
     }
 
 }

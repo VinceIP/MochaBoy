@@ -20,6 +20,7 @@ dependencies {
     runtimeOnly("org.lwjgl:lwjgl:3.3.2:natives-windows")
     runtimeOnly("org.lwjgl:lwjgl-opengl:3.3.2:natives-windows")
     runtimeOnly("org.lwjgl:lwjgl-glfw:3.3.2:natives-windows")
+    implementation ("com.google.code.gson:gson:2.11.0")
 }
 
 java {

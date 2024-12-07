@@ -30,13 +30,25 @@ public class Memory {
     }
 
     /**
+     * Write byte at address.
+     *
+     * @param address
+     * @param value
+     */
+    public void writeByte(int address, int value) {
+        value = value & 0xFF;
+        address = address & 0xFFFF;
+        memory[address] = (byte) value;
+    }
+
+    /**
      * @param address
      * @return Get a 2-byte value from address.
      */
     public int readWord(int address) {
-        int lowByte = readByte(address);
-        int highByte = readByte(address + 1) & 0xFF;
-        return (highByte << 8) | lowByte & 0xFF;
+        int lowByte = readByte(address & 0xFFFF);
+        int highByte = readByte((address + 1) & 0xFFFF);
+        return (highByte << 8) | lowByte;
     }
 
     /**
@@ -60,7 +72,7 @@ public class Memory {
         System.arraycopy(cartridge.getCartData(), 0, memory, 0, cartridge.getCartData().length);
     }
 
-    public int getMemoryLength(){
+    public int getMemoryLength() {
         return memory.length;
     }
 
