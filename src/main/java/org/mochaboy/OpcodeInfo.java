@@ -1,24 +1,17 @@
 package org.mochaboy;
 
 public class OpcodeInfo {
-    private final boolean prefixed;
-    private final int opcode;
-    private final String mnemonic;
-    private final int bytes;
-    private final int cycles;
-    private final Operand[] operands;
-    private final boolean immediate;
-    private final String[] flags;
+    private boolean prefixed;
+    private boolean cbprefixed;
+    private int opcode;
+    private String mnemonic;
+    private int bytes;
+    private int[] cycles;
+    private Operand[] operands;
+    private boolean immediate;
+    private Flags flags;
 
-    public OpcodeInfo(boolean prefixed, int opcode, String mnemonic, int bytes, int cycles, Operand[] operands, boolean immediate, String[] flags) {
-        this.prefixed = prefixed;
-        this.opcode = opcode;
-        this.mnemonic = mnemonic;
-        this.bytes = bytes;
-        this.cycles = cycles;
-        this.operands = operands;
-        this.immediate = immediate;
-        this.flags = flags;
+    public OpcodeInfo() {
     }
 
     public boolean isPrefixed() {
@@ -37,7 +30,7 @@ public class OpcodeInfo {
         return bytes;
     }
 
-    public int getCycles() {
+    public int[] getCycles() {
         return cycles;
     }
 
@@ -49,7 +42,47 @@ public class OpcodeInfo {
         return immediate;
     }
 
-    public String[] getFlags() {
+    public Flags getFlags() {
         return flags;
+    }
+
+    public boolean isCbprefixed() {
+        return cbprefixed;
+    }
+
+    public void setPrefixed(boolean prefixed) {
+        this.prefixed = prefixed;
+    }
+
+    public void setOpcode(int opcode) {
+        this.opcode = opcode;
+    }
+
+    public void setMnemonic(String mnemonic) {
+        this.mnemonic = mnemonic;
+    }
+
+    public void setBytes(int bytes) {
+        this.bytes = bytes;
+    }
+
+    public void setCycles(int[] cycles) {
+        this.cycles = cycles;
+    }
+
+    public void setOperands(Operand[] operands) {
+        this.operands = operands;
+    }
+
+    public void setImmediate(boolean immediate) {
+        this.immediate = immediate;
+    }
+
+    public void setFlags(Flags flags) {
+        this.flags = flags;
+    }
+
+    public void setCbprefixed(boolean cbprefixed) {
+        this.cbprefixed = cbprefixed;
     }
 }

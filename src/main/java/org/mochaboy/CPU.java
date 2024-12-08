@@ -32,7 +32,7 @@ public class CPU {
     }
 
     public void execute(int opcode) {
-        Opcode.execute(this, opcode);
+        //OpcodeHandler.execute(this, opcode);
     }
 
     public Memory getMemory() {
