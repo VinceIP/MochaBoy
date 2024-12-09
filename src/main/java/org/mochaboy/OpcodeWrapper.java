@@ -6,7 +6,8 @@ public class OpcodeWrapper {
     private Map<String, OpcodeInfo> unprefixed;
     private Map<String, OpcodeInfo> cbprefixed;
 
-    public OpcodeWrapper(){}
+    public OpcodeWrapper() {
+    }
 
     public Map<String, OpcodeInfo> getUnprefixed() {
         return unprefixed;

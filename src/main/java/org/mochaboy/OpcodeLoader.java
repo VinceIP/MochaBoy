@@ -10,10 +10,12 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class OpcodeLoader {
-    private Map<Integer, OpcodeInfo> unprefixedMap = new HashMap<>();
-    private Map<Integer, OpcodeInfo> prefixedMap = new HashMap<>();
+    private Map<String, OpcodeInfo> unprefixedMap = new HashMap<>();
+    private Map<String, OpcodeInfo> prefixedMap = new HashMap<>();
+    private OpcodeWrapper opcodeWrapper;
 
-    public OpcodeLoader() {
+    public OpcodeLoader() throws IOException {
+        loadOpcodes();
     }
 
     private void loadOpcodes() throws IOException {
@@ -21,7 +23,19 @@ public class OpcodeLoader {
         InputStreamReader reader = new InputStreamReader(getClass().getResourceAsStream("/Opcodes.json"));
         Type type = new TypeToken<OpcodeWrapper>() {
         }.getType();
-        OpcodeWrapper opcodeWrapper = gson.fromJson(reader, type);
+        this.opcodeWrapper = gson.fromJson(reader, type);
         reader.close();
+    }
+
+    public Map<String, OpcodeInfo> getUnprefixedMap() {
+        return unprefixedMap;
+    }
+
+    public Map<String, OpcodeInfo> getPrefixedMap() {
+        return prefixedMap;
+    }
+
+    public OpcodeWrapper getOpcodeWrapper() {
+        return opcodeWrapper;
     }
 }

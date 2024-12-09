@@ -13,16 +13,10 @@ class OpcodeLoaderTest {
 
     @Test
     void testLoadOpcodes() throws IOException {
-        // Arrange
-        Gson gson = new Gson();
-        InputStreamReader reader = new InputStreamReader(getClass().getResourceAsStream("/Opcodes.json"));
-        Type type = new TypeToken<OpcodeWrapper>(){}.getType();
 
-        // Act
-        OpcodeWrapper opcodeWrapper = gson.fromJson(reader, type);
-        reader.close();
+        OpcodeLoader opcodeLoader = new OpcodeLoader();
+        OpcodeWrapper opcodeWrapper = opcodeLoader.getOpcodeWrapper();
 
-        // Assert
         assertNotNull(opcodeWrapper, "OpcodeWrapper should not be null");
         assertNotNull(opcodeWrapper.getUnprefixed(), "Unprefixed opcodes map should not be null");
         assertNotNull(opcodeWrapper.getCbprefixed(), "Prefixed opcodes map should not be null");
