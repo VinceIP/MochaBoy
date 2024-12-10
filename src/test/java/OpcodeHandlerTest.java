@@ -151,4 +151,127 @@ class OpcodeHandlerTest {
         assertFalse(cpu.getRegisters().isFlagSet(Registers.FLAG_HALF_CARRY));
         assertFalse(cpu.getRegisters().isFlagSet(Registers.FLAG_SUBTRACT));
     }
+
+    @Test
+    void testADC_A_r8_withCarryFromAddition() {
+        OpcodeInfo opcodeInfo = opcodeWrapper.getUnprefixed().get("0x88"); // ADC A, B example opcode
+
+        cpu.getRegisters().setA(0xFF);
+        cpu.getRegisters().setB(0x01);
+        cpu.getRegisters().clearFlag(Registers.FLAG_CARRY); // No initial carry
+
+        opcodeHandler.execute(cpu, opcodeInfo);
+
+        assertEquals(0x00, cpu.getRegisters().getA());
+        assertTrue(cpu.getRegisters().isFlagSet(Registers.FLAG_ZERO));
+        assertTrue(cpu.getRegisters().isFlagSet(Registers.FLAG_CARRY));
+        assertTrue(cpu.getRegisters().isFlagSet(Registers.FLAG_HALF_CARRY));
+        assertFalse(cpu.getRegisters().isFlagSet(Registers.FLAG_SUBTRACT));
+    }
+
+    @Test
+    void testADC_A_r8_withHalfCarry() {
+        OpcodeInfo opcodeInfo = opcodeWrapper.getUnprefixed().get("0x88"); // ADC A, B example opcode
+
+        cpu.getRegisters().setA(0x0F);
+        cpu.getRegisters().setB(0x01);
+        cpu.getRegisters().clearFlag(Registers.FLAG_CARRY); // No initial carry
+
+        opcodeHandler.execute(cpu, opcodeInfo);
+
+        assertEquals(0x10, cpu.getRegisters().getA());
+        assertFalse(cpu.getRegisters().isFlagSet(Registers.FLAG_ZERO));
+        assertFalse(cpu.getRegisters().isFlagSet(Registers.FLAG_CARRY));
+        assertTrue(cpu.getRegisters().isFlagSet(Registers.FLAG_HALF_CARRY));
+        assertFalse(cpu.getRegisters().isFlagSet(Registers.FLAG_SUBTRACT));
+    }
+
+    @Test
+    void testADC_A_r8_withCarryIn() {
+        OpcodeInfo opcodeInfo = opcodeWrapper.getUnprefixed().get("0x88"); // ADC A, B example opcode
+
+        cpu.getRegisters().setA(0xFE);
+        cpu.getRegisters().setB(0x00);
+        cpu.getRegisters().setFlag(Registers.FLAG_CARRY); // Initial carry
+
+        opcodeHandler.execute(cpu, opcodeInfo);
+
+        assertEquals(0xFF, cpu.getRegisters().getA());
+        assertFalse(cpu.getRegisters().isFlagSet(Registers.FLAG_ZERO));
+        assertFalse(cpu.getRegisters().isFlagSet(Registers.FLAG_CARRY));
+        assertFalse(cpu.getRegisters().isFlagSet(Registers.FLAG_HALF_CARRY));
+        assertFalse(cpu.getRegisters().isFlagSet(Registers.FLAG_SUBTRACT));
+    }
+
+    @Test
+    void testADC_A_r8_fullCarry() {
+        OpcodeInfo opcodeInfo = opcodeWrapper.getUnprefixed().get("0x88"); // ADC A, B example opcode
+
+        cpu.getRegisters().setA(0xFF);
+        cpu.getRegisters().setB(0x00);
+        cpu.getRegisters().setFlag(Registers.FLAG_CARRY); // Initial carry
+
+        opcodeHandler.execute(cpu, opcodeInfo);
+
+        assertEquals(0x00, cpu.getRegisters().getA());
+        assertTrue(cpu.getRegisters().isFlagSet(Registers.FLAG_ZERO));
+        assertTrue(cpu.getRegisters().isFlagSet(Registers.FLAG_CARRY));
+        assertTrue(cpu.getRegisters().isFlagSet(Registers.FLAG_HALF_CARRY)); // Half-carry should be set!
+        assertFalse(cpu.getRegisters().isFlagSet(Registers.FLAG_SUBTRACT));
+    }
+
+
+    @Test
+    void testADC_A_r8_noCarry_noHalfCarry() {
+        OpcodeInfo opcodeInfo = opcodeWrapper.getUnprefixed().get("0x88"); // ADC A, B example opcode
+
+        cpu.getRegisters().setA(0x01);
+        cpu.getRegisters().setB(0x01);
+        cpu.getRegisters().clearFlag(Registers.FLAG_CARRY);
+
+        opcodeHandler.execute(cpu, opcodeInfo);
+
+        assertEquals(0x02, cpu.getRegisters().getA());
+        assertFalse(cpu.getRegisters().isFlagSet(Registers.FLAG_ZERO));
+        assertFalse(cpu.getRegisters().isFlagSet(Registers.FLAG_CARRY));
+        assertFalse(cpu.getRegisters().isFlagSet(Registers.FLAG_HALF_CARRY));
+        assertFalse(cpu.getRegisters().isFlagSet(Registers.FLAG_SUBTRACT));
+    }
+
+    @Test
+    void testADC_A_HL_fullCarry() {
+        OpcodeInfo opcodeInfo = opcodeWrapper.getUnprefixed().get("0x8E"); // ADC A, [HL] example opcode
+
+        cpu.getRegisters().setA(0xFF);
+        cpu.getRegisters().setH(0x01);
+        cpu.getRegisters().setL(0x00);
+        cpu.getMemory().writeByte(cpu.getRegisters().getHL(), 0x01);
+        cpu.getRegisters().clearFlag(Registers.FLAG_CARRY);
+
+        opcodeHandler.execute(cpu, opcodeInfo);
+
+        assertEquals(0x00, cpu.getRegisters().getA());
+        assertTrue(cpu.getRegisters().isFlagSet(Registers.FLAG_ZERO));
+        assertTrue(cpu.getRegisters().isFlagSet(Registers.FLAG_CARRY));
+        assertTrue(cpu.getRegisters().isFlagSet(Registers.FLAG_HALF_CARRY));
+        assertFalse(cpu.getRegisters().isFlagSet(Registers.FLAG_SUBTRACT));
+    }
+
+    @Test
+    void testADC_A_n8_halfCarryWithCarryIn() {
+        OpcodeInfo opcodeInfo = opcodeWrapper.getUnprefixed().get("0xCE"); // ADC A, n8 example opcode
+
+        cpu.getRegisters().setA(0x0E);
+        cpu.getRegisters().setPC(0x1234);
+        cpu.getMemory().writeByte(0x1234, 0x01);
+        cpu.getRegisters().setFlag(Registers.FLAG_CARRY);
+
+        opcodeHandler.execute(cpu, opcodeInfo);
+
+        assertEquals(0x10, cpu.getRegisters().getA());
+        assertFalse(cpu.getRegisters().isFlagSet(Registers.FLAG_ZERO));
+        assertFalse(cpu.getRegisters().isFlagSet(Registers.FLAG_CARRY));
+        assertTrue(cpu.getRegisters().isFlagSet(Registers.FLAG_HALF_CARRY));
+        assertFalse(cpu.getRegisters().isFlagSet(Registers.FLAG_SUBTRACT));
+    }
 }

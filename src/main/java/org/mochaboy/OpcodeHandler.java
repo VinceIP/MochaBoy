@@ -35,31 +35,34 @@ public class OpcodeHandler {
      * @param opcodeInfo
      */
     private void ADC(CPU cpu, OpcodeInfo opcodeInfo) {
-        //No need to get an xOpr - ADC's x operand is always A, so we alays know where to get the value
         Operand yOpr = opcodeInfo.getOperands()[1];
         int xVal = cpu.getRegisters().getA() & 0xFF;
         int yVal;
-        //If getting value in memory
+
         if (yOpr.getName().equals("n8")) {
+            //Get immediate 8-bit value
             yVal = cpu.getMemory().readByte(cpu.getRegisters().getPC());
             cpu.getRegisters().incrementPC();
-            //Otherwise, we're getting a value from a register or immediate
-        } else yVal = cpu.getRegisters().getByName(yOpr.getName()) & 0xFF;
+        } else if (yOpr.getName().equals("HL")) {
+            //get 16-bit value in [HL]
+            yVal = cpu.getMemory().readByte(cpu.getRegisters().getHL());
+        } else {
+            //Otherwise, get the 8-bit registered specified in the operand
+            yVal = cpu.getRegisters().getByName(yOpr.getName()) & 0xFF;
+        }
 
+        //Add result plus the current carry bit
         int carry = cpu.getRegisters().isFlagSet(Registers.FLAG_CARRY) ? 1 : 0;
-        int result = yVal + xVal + carry;
+        int result = xVal + yVal + carry;
 
-        if ((result & 0xFF) == 0) cpu.getRegisters().setFlag(Registers.FLAG_ZERO);
-        else cpu.getRegisters().clearFlag(Registers.FLAG_ZERO);
+        //Set flags per instruction
+        cpu.getRegisters().setFlag(Registers.FLAG_ZERO, (result & 0xFF) == 0);
+        cpu.getRegisters().setFlag(Registers.FLAG_HALF_CARRY, ((xVal & 0xF) + (yVal & 0xF) + carry) > 0xF);
+        cpu.getRegisters().setFlag(Registers.FLAG_CARRY, ((((xVal & 0xFF) + (yVal & 0xFF)) + carry) & 0x100) != 0);
+        cpu.getRegisters().setFlag(Registers.FLAG_SUBTRACT, false);
 
-        if ((xVal + yVal + carry) > 0xFF) cpu.getRegisters().setFlag(Registers.FLAG_CARRY);
-        else cpu.getRegisters().clearFlag(Registers.FLAG_CARRY);
-
-        if (((xVal & 0xF) + (yVal & 0xF) + carry) > 0xF) cpu.getRegisters().setFlag(Registers.FLAG_HALF_CARRY);
-        else cpu.getRegisters().clearFlag(Registers.FLAG_HALF_CARRY);
-
-        cpu.getRegisters().clearFlag(Registers.FLAG_SUBTRACT);
         cpu.getRegisters().setA(result & 0xFF);
     }
+
 }
 

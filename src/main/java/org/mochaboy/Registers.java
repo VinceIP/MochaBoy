@@ -166,6 +166,14 @@ public class Registers {
         F |= flag;
     }
 
+    public void setFlag(int flag, boolean condition) {
+        if (condition) {
+            F |= flag; // Set the bit if condition is true
+        } else {
+            F &= ~flag; // Clear the bit if condition is false
+        }
+    }
+
     public void clearFlag(int flag) {
         F &= ~flag;
     }
