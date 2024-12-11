@@ -29,6 +29,10 @@ public class Memory {
         return memory[address & 0xFFFF] & 0xFF;
     }
 
+    public int readUnsignedByte(int address) {
+        return memory[address & 0xFFFF];
+    }
+
     /**
      * Write byte at address.
      *
