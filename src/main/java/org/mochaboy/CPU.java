@@ -28,7 +28,7 @@ public class CPU {
     }
 
     public byte fetch() {
-        return memory.readByte(registers.getPC());
+        return (byte) (memory.readByte(registers.getPC()) & 0xFF);
     }
 
     public void execute(int opcode) {

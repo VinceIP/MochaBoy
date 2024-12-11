@@ -25,8 +25,8 @@ public class Memory {
      * @param address
      * @return Get a single byte from address.
      */
-    public byte readByte(int address) {
-        return memory[address & 0xFFFF];
+    public int readByte(int address) {
+        return memory[address & 0xFFFF] & 0xFF;
     }
 
     /**
