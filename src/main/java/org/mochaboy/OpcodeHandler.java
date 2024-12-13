@@ -8,10 +8,12 @@ public class OpcodeHandler {
     private Map<String, OpcodeInfo> opcodeMapUnprefixed;
     private Map<String, OpcodeInfo> opcodeMapPrefixed;
     private Map<String, BiConsumer<CPU, OpcodeInfo>> mnemonicMap;
+    private FlagCalculator flagCalculator;
 
     public OpcodeHandler(OpcodeWrapper opcodeWrapper) {
         this.opcodeMapUnprefixed = opcodeWrapper.getUnprefixed();
         this.opcodeMapPrefixed = opcodeWrapper.getCbprefixed();
+        flagCalculator = new FlagCalculator();
         mapMnemonics();
     }
 
@@ -101,41 +103,75 @@ public class OpcodeHandler {
     }
 
     private void processFlags(CPU cpu, OpcodeInfo opcodeInfo, int xVal, int yVal) {
-        Flags flags = opcodeInfo.getFlags();
-        String mnemonic = opcodeInfo.getMnemonic();
-        Operand xOpr = opcodeInfo.getOperands()[0];
-        Operand yOpr = opcodeInfo.getOperands()[1];
-
-        FlagConditions conditions = getFlagConditions(mnemonic, xOpr, yOpr, xVal, yVal);
-
-        switch (flags.getZ()) {
-            case "Z" -> cpu.getRegisters().setFlag(Registers.FLAG_ZERO, conditions.isZero);
-            case "0" -> cpu.getRegisters().clearFlag(Registers.FLAG_ZERO);
-            case "1" -> cpu.getRegisters().setFlag(Registers.FLAG_ZERO);
-        }
-
-        switch (flags.getN()) {
-            case "N" -> cpu.getRegisters().setFlag(Registers.FLAG_SUBTRACT, conditions.isSubtract);
-            case "0" -> cpu.getRegisters().clearFlag(Registers.FLAG_SUBTRACT);
-            case "1" -> cpu.getRegisters().setFlag(Registers.FLAG_SUBTRACT);
-        }
-
-        switch (flags.getH()) {
-            case "H" -> cpu.getRegisters().setFlag(Registers.FLAG_SUBTRACT, conditions.isHalfCarry);
-            case "0" -> cpu.getRegisters().clearFlag(Registers.FLAG_HALF_CARRY);
-            case "1" -> cpu.getRegisters().setFlag(Registers.FLAG_HALF_CARRY);
-        }
-
-        switch (flags.getC()) {
-            case "C" -> cpu.getRegisters().setFlag(Registers.FLAG_CARRY, conditions.isCarry);
-            case "0" -> cpu.getRegisters().clearFlag(Registers.FLAG_CARRY);
-            case "1" -> cpu.getRegisters().setFlag(Registers.FLAG_CARRY);
-        }
+        FlagConditions conditions = flagCalculator.calculateFlags(
+                opcodeInfo.getMnemonic(), xVal, yVal, opcodeInfo.getOperands());
+        applyFlags(cpu, opcodeInfo.getFlags(), conditions);
     }
 
-    private FlagConditions getFlagConditions(String mnemonic, Operand xOpr, Operand yOpr, int xVal, int yVal) {
-        FlagConditions conditions = new FlagConditions();
+    /**
+     * Apply flags to CPU based on calculated conditions or opcode info
+     *
+     * @param flags
+     * @param conditions
+     */
+    private void applyFlags(CPU cpu, Flags flags, FlagConditions conditions) {
+        //Zero flag
+        switch (flags.getZ()) {
+            //OpcodeInfo indicates this flag should be set based on conditions that were set in the flag calculator
+            case "Z":
+                cpu.getRegisters().setFlag(Registers.FLAG_ZERO, conditions.isZero);
+                break;
+            //Opcode info indicates this flag should always be cleared
+            case "0":
+                cpu.getRegisters().clearFlag(Registers.FLAG_ZERO);
+                break;
+            //Opcode info indicates this flags should always be set
+            case "1":
+                cpu.getRegisters().setFlag(Registers.FLAG_ZERO);
+                break;
+            //Opcode info could give "-", indicating nothing should change with this flag
+        }
 
+        // Subtract flag
+        switch (flags.getN()) {
+            case "N":
+                cpu.getRegisters().setFlag(Registers.FLAG_SUBTRACT, conditions.isSubtract);
+            case "0":
+                cpu.getRegisters().clearFlag(Registers.FLAG_SUBTRACT);
+                break;
+            case "1":
+                cpu.getRegisters().setFlag(Registers.FLAG_SUBTRACT);
+                break;
+            // "-" and other cases - do nothing
+        }
+
+        // Half-carry flag
+        switch (flags.getH()) {
+            case "H":
+                cpu.getRegisters().setFlag(Registers.FLAG_HALF_CARRY, conditions.isHalfCarry);
+                break;
+            case "0":
+                cpu.getRegisters().clearFlag(Registers.FLAG_HALF_CARRY);
+                break;
+            case "1":
+                cpu.getRegisters().setFlag(Registers.FLAG_HALF_CARRY);
+                break;
+            // "-" case - do nothing
+        }
+
+        // Carry flag
+        switch (flags.getC()) {
+            case "C":
+                cpu.getRegisters().setFlag(Registers.FLAG_CARRY, conditions.isCarry);
+                break;
+            case "0":
+                cpu.getRegisters().clearFlag(Registers.FLAG_CARRY);
+                break;
+            case "1":
+                cpu.getRegisters().setFlag(Registers.FLAG_CARRY);
+                break;
+            // "-" case - do nothing
+        }
     }
 
     private boolean is8BitRegister(String register) {

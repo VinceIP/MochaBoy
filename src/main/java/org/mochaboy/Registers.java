@@ -39,7 +39,6 @@ public class Registers {
         registerSettersMap.put("C", Registers::setC);
         registerSettersMap.put("D", Registers::setD);
         registerSettersMap.put("E", Registers::setE);
-        registerSettersMap.put("F", Registers::setF);
         registerSettersMap.put("H", Registers::setH);
         registerSettersMap.put("L", Registers::setL);
         registerSettersMap.put("SP", Registers::setSP);
@@ -91,13 +90,6 @@ public class Registers {
         E = e;
     }
 
-    public int getF() {
-        return F;
-    }
-
-    public void setF(int f) {
-        F = f;
-    }
 
     public int getH() {
         return H;
@@ -146,7 +138,7 @@ public class Registers {
 
     public void setAF(int val) {
         A = (val >> 8) & 0xFF;
-        F = val & 0xFF;
+        F = val & 0xF0; // Mask out the lower nibble
     }
 
     public int getBC() {
@@ -187,11 +179,7 @@ public class Registers {
     }
 
     public void setFlag(int flag, boolean condition) {
-        if (condition) {
-            F |= flag; // Set the bit if condition is true
-        } else {
-            F &= ~flag; // Clear the bit if condition is false
-        }
+        F = (condition) ? (F | flag) & 0xF0 : (F & ~flag) & 0xF0;
     }
 
     public void clearFlag(int flag) {

@@ -18,15 +18,41 @@ public class FlagCalculator {
         //ADD
         calculators.put("ADD", (xVal, yVal, operands) -> {
             FlagConditions conditions = new FlagConditions();
-
-
-
+            switch (operands[1].getName()) {
+                //Immediate 8-bit values
+                case "e8":
+                    int lowerByte = xVal & 0xFF;
+                    int e8 = yVal & 0xFF;
+                    conditions.isHalfCarry = (((xVal & 0x0FFF) + (yVal & 0x0FFF)) & 0x1000) != 0;
+                    conditions.isCarry = lowerByte + e8 > 0xFF;
+                    break;
+                //values of any 16-bit register
+                case "AF":
+                case "BC":
+                case "DE":
+                case "HL":
+                case "SP":
+                case "PC":
+                    conditions.isHalfCarry = (((xVal & 0x0FFF) + (yVal & 0x0FFF)) & 0x1000) != 0;
+                    conditions.isCarry = ((xVal & 0xFFFF) + (yVal & 0xFFFF)) > 0xFFFF;
+                    break;
+                default:
+                    conditions.isZero = ((xVal + yVal) & 0xFF) == 0;
+                    conditions.isHalfCarry = (xVal & 0xF) + (yVal & 0xF) > 0xF;
+                    conditions.isCarry = (xVal + yVal) > 0xFF;
+            }
             return conditions;
         });
     }
 
     private void registerBitOperationCalculators() {
 
+    }
+
+    public FlagConditions calculateFlags(String mnemonic, int xVal, int yVal, Operand[] operands) {
+        FlagConditionCalculator calculator = calculators.get(mnemonic);
+        if (calculator == null) throw new IllegalArgumentException("No flag calculator for " + mnemonic);
+        return calculator.calculate(xVal, yVal, operands);
     }
 }
 

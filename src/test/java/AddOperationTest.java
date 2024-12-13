@@ -140,7 +140,7 @@ class AddOperationTest {
 
         assertEquals(0x1000, cpu.getRegisters().getHL());
         assertTrue(cpu.getRegisters().isFlagSet(Registers.FLAG_CARRY));
-        assertTrue(cpu.getRegisters().isFlagSet(Registers.FLAG_HALF_CARRY));
+        assertFalse(cpu.getRegisters().isFlagSet(Registers.FLAG_HALF_CARRY));
         assertFalse(cpu.getRegisters().isFlagSet(Registers.FLAG_SUBTRACT));
     }
 
@@ -176,8 +176,8 @@ class AddOperationTest {
         assertEquals(0x0FFE, cpu.getRegisters().getSP());
         assertEquals(0x2001, cpu.getRegisters().getPC());
         assertFalse(cpu.getRegisters().isFlagSet(Registers.FLAG_ZERO));
-        assertTrue(cpu.getRegisters().isFlagSet(Registers.FLAG_CARRY));
-        assertTrue(cpu.getRegisters().isFlagSet(Registers.FLAG_HALF_CARRY));
+        assertFalse(cpu.getRegisters().isFlagSet(Registers.FLAG_CARRY));
+        assertFalse(cpu.getRegisters().isFlagSet(Registers.FLAG_HALF_CARRY));
         assertFalse(cpu.getRegisters().isFlagSet(Registers.FLAG_SUBTRACT));
     }
 }
