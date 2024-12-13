@@ -12,11 +12,13 @@ public class FlagCalculator {
     public FlagCalculator() {
         registerArithmeticCalculators();
         registerBitOperationCalculators();
+        registerComparisonCalculators();
+        registerMiscCalculators();
     }
 
     private void registerArithmeticCalculators() {
         //ADD
-        calculators.put("ADD", (xVal, yVal, operands) -> {
+        calculators.put("ADD", (cpu, xVal, yVal, operands) -> {
             FlagConditions conditions = new FlagConditions();
             switch (operands[1].getName()) {
                 //Immediate 8-bit values
@@ -43,20 +45,52 @@ public class FlagCalculator {
             }
             return conditions;
         });
+
+        calculators.put("ADC", (cpu, xVal, yVal, operands) -> {
+            FlagConditions conditions = new FlagConditions();
+            int carry = cpu.getRegisters().isFlagSet(Registers.FLAG_CARRY) ? 1 : 0;
+            conditions.isZero = ((xVal + yVal + carry) & 0xFF) == 0;
+            conditions.isHalfCarry = (xVal & 0xF) + (yVal & 0xF) + carry > 0xF;
+            conditions.isCarry = (xVal + yVal + carry) > 0xFF;
+            return conditions;
+        });
     }
 
     private void registerBitOperationCalculators() {
+        calculators.put("AND", (cpu, xVal, yVal, operands) -> {
+            FlagConditions conditions = new FlagConditions();
+            conditions.isZero = ((xVal & yVal) & 0xFF) == 0;
+            return conditions;
+        });
 
+        calculators.put("BIT", (cpu, xVal, yVal, operands) -> {
+            FlagConditions conditions = new FlagConditions();
+            conditions.isZero = (yVal & (1 << xVal)) == 0;
+            return conditions;
+        });
     }
 
-    public FlagConditions calculateFlags(String mnemonic, int xVal, int yVal, Operand[] operands) {
+    private void registerComparisonCalculators() {
+        calculators.put("CP", (cpu, xVal, yVal, operands) -> {
+            FlagConditions conditions = new FlagConditions();
+            conditions.isZero = ((xVal - yVal) & 0xFF) == 0;
+            conditions.isHalfCarry = ((xVal & 0xF0) < (yVal & 0xF0)) || ((xVal & 0xF) < (yVal & 0xF));
+            conditions.isCarry = (yVal > xVal);
+            return conditions;
+        });
+    }
+
+    private void registerMiscCalculators() {
+    }
+
+    public FlagConditions calculateFlags(CPU cpu, String mnemonic, int xVal, int yVal, Operand[] operands) {
         FlagConditionCalculator calculator = calculators.get(mnemonic);
         if (calculator == null) throw new IllegalArgumentException("No flag calculator for " + mnemonic);
-        return calculator.calculate(xVal, yVal, operands);
+        return calculator.calculate(cpu, xVal, yVal, operands);
     }
 }
 
 @FunctionalInterface
 interface FlagConditionCalculator {
-    FlagConditions calculate(int xVal, int yVal, Operand[] operands);
+    FlagConditions calculate(CPU cpu, int xVal, int yVal, Operand[] operands);
 }

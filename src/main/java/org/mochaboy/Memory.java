@@ -45,6 +45,17 @@ public class Memory {
         memory[address] = (byte) value;
     }
 
+    public void writeWord(int address, int value) {
+        address = address & 0xFFFF;
+
+        int valueLow = value & 0xFF;
+        int valueHigh = (value >> 8) & 0xFF;
+
+        writeByte(address, valueLow);
+        int nextAddress = (address + 1) & 0xFFFF;
+        writeByte(nextAddress, valueHigh);
+    }
+
     /**
      * @param address
      * @return Get a 2-byte value from address.

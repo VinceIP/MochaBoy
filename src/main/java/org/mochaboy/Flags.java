@@ -6,7 +6,8 @@ public class Flags {
     private String H;
     private String C;
 
-    public Flags(){}
+    public Flags() {
+    }
 
     public String getZ() {
         return Z;
@@ -38,5 +39,20 @@ public class Flags {
 
     public void setC(String c) {
         C = c;
+    }
+
+    public static boolean CheckFlagsByChar(CPU cpu, char flagString) {
+        switch (flagString) {
+            case 'Z':
+                return cpu.getRegisters().isFlagSet(Registers.FLAG_ZERO);
+            case 'N':
+                return cpu.getRegisters().isFlagSet(Registers.FLAG_SUBTRACT);
+            case 'H':
+                return cpu.getRegisters().isFlagSet(Registers.FLAG_HALF_CARRY);
+            case 'C':
+                return cpu.getRegisters().isFlagSet(Registers.FLAG_CARRY);
+            default:
+                return false;
+        }
     }
 }

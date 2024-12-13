@@ -4,11 +4,13 @@ public class CPU {
 
     private Memory memory;
     private Registers registers;
+    private Stack stack;
     private long tStateCounter;
 
     public CPU(Memory memory) {
         this.memory = memory;
         this.registers = new Registers();
+        stack = new Stack(this);
     }
 
     private void init() {
@@ -55,4 +57,7 @@ public class CPU {
         this.tStateCounter += value;
     }
 
+    public Stack getStack() {
+        return stack;
+    }
 }

@@ -29,6 +29,11 @@ public class OpcodeHandler {
         this.mnemonicMap = new HashMap<>();
         mnemonicMap.put("ADC", this::ADC);
         mnemonicMap.put("ADD", this::ADD);
+        mnemonicMap.put("AND", this::AND);
+        mnemonicMap.put("BIT", this::BIT);
+        mnemonicMap.put("CP", this::CP);
+        mnemonicMap.put("CALL", this::CALL);
+        mnemonicMap.put("JP", this::JP);
     }
 
     /**
@@ -38,6 +43,7 @@ public class OpcodeHandler {
      * @param opcodeInfo
      */
     private void ADC(CPU cpu, OpcodeInfo opcodeInfo) {
+        Operand xOpr = opcodeInfo.getOperands()[0];
         Operand yOpr = opcodeInfo.getOperands()[1];
         int xVal = cpu.getRegisters().getA() & 0xFF;
         int yVal;
@@ -58,13 +64,8 @@ public class OpcodeHandler {
         int carry = cpu.getRegisters().isFlagSet(Registers.FLAG_CARRY) ? 1 : 0;
         int result = xVal + yVal + carry;
 
-        //Set flags per instruction
-        cpu.getRegisters().setFlag(Registers.FLAG_ZERO, (result & 0xFF) == 0);
-        cpu.getRegisters().setFlag(Registers.FLAG_HALF_CARRY, ((xVal & 0xF) + (yVal & 0xF) + carry) > 0xF);
-        cpu.getRegisters().setFlag(Registers.FLAG_CARRY, ((((xVal & 0xFF) + (yVal & 0xFF)) + carry) & 0x100) != 0);
-        cpu.getRegisters().setFlag(Registers.FLAG_SUBTRACT, false);
-
-        cpu.getRegisters().setA(result & 0xFF);
+        processFlags(cpu, opcodeInfo, xVal, yVal);
+        applyResult(cpu, xOpr.getName(), result);
     }
 
     /**
@@ -95,21 +96,130 @@ public class OpcodeHandler {
                 yVal = cpu.getRegisters().getByName(yOpr.getName());
                 break;
         }
-
-        processFlags(cpu, opcodeInfo, xVal, yVal);
         int result = xVal + yVal;
+        processFlags(cpu, opcodeInfo, xVal, yVal);
         applyResult(cpu, xOpr.getName(), result);
 
     }
 
+    private void AND(CPU cpu, OpcodeInfo opcodeInfo) {
+        Operand xOpr = opcodeInfo.getOperands()[0];
+        Operand yOpr = opcodeInfo.getOperands()[1];
+
+        int xVal = cpu.getRegisters().getByName(xOpr.getName());
+        int yVal;
+
+        switch (yOpr.getName()) {
+            case "n8":
+                yVal = cpu.getMemory().readByte(cpu.getRegisters().getPC());
+                cpu.getRegisters().incrementPC();
+                break;
+            case "HL":
+                yVal = cpu.getMemory().readByte(cpu.getRegisters().getHL());
+                break;
+            default:
+                yVal = cpu.getRegisters().getByName(yOpr.getName());
+                break;
+        }
+        int result = (xVal & yVal) & 0xFF;
+        processFlags(cpu, opcodeInfo, xVal, yVal);
+        applyResult(cpu, xOpr.getName(), result);
+    }
+
+    private void BIT(CPU cpu, OpcodeInfo opcodeInfo) {
+        Operand xOpr = opcodeInfo.getOperands()[0];
+        Operand yOpr = opcodeInfo.getOperands()[1];
+        //Get u3 from the opcode
+        int xVal = (opcodeInfo.getOpcode() >> 3) & 0x07;
+        cpu.getRegisters().incrementPC();
+        int yVal;
+        if (yOpr.getName().equals("HL")) yVal = cpu.getMemory().readByte(cpu.getRegisters().getHL());
+        else yVal = cpu.getRegisters().getByName(yOpr.getName());
+
+        processFlags(cpu, opcodeInfo, xVal, yVal);
+    }
+
+    /**
+     * Subtract value in yOpr from xOpr and set flags accordingly, but don't store the result. For comparing values.
+     *
+     * @param cpu
+     * @param opcodeInfo
+     */
+    private void CP(CPU cpu, OpcodeInfo opcodeInfo) {
+        Operand xOpr = opcodeInfo.getOperands()[0];
+        Operand yOpr = opcodeInfo.getOperands()[1];
+
+        int xVal = cpu.getRegisters().getByName(xOpr.getName());
+        int yVal;
+        switch (yOpr.getName()) {
+            case "n8":
+                yVal = cpu.getMemory().readByte(cpu.getRegisters().getPC());
+                cpu.getRegisters().incrementPC();
+                break;
+            case "HL":
+                yVal = cpu.getMemory().readByte(cpu.getRegisters().getHL());
+                break;
+            default:
+                yVal = cpu.getRegisters().getByName(yOpr.getName());
+                break;
+        }
+
+        processFlags(cpu, opcodeInfo, xVal, yVal);
+
+    }
+
+    private void CALL(CPU cpu, OpcodeInfo opcodeInfo) {
+
+        int address = cpu.getMemory().readWord(cpu.getRegisters().getPC());
+        cpu.getRegisters().incrementPC(2);
+        cpu.getStack().push(address);
+
+        JP(cpu, opcodeInfo);
+    }
+
+
+    private void JP(CPU cpu, OpcodeInfo opcodeInfo) {
+        int address = cpu.getMemory().readWord(cpu.getRegisters().getPC());
+        cpu.getRegisters().incrementPC(2);
+
+        if (opcodeInfo.getOperands().length > 1) {
+            Operand xOpr = opcodeInfo.getOperands()[0];
+            String condition = xOpr.getName(); // "Z", "NZ", "C", "NC"
+
+            boolean shouldJump = false;
+            switch (condition) {
+                case "Z":
+                    shouldJump = cpu.getRegisters().isFlagSet(Registers.FLAG_ZERO);
+                    break;
+                case "NZ":
+                    shouldJump = !cpu.getRegisters().isFlagSet(Registers.FLAG_ZERO);
+                    break;
+                case "C":
+                    shouldJump = cpu.getRegisters().isFlagSet(Registers.FLAG_CARRY);
+                    break;
+                case "NC":
+                    shouldJump = !cpu.getRegisters().isFlagSet(Registers.FLAG_CARRY);
+                    break;
+            }
+
+            if (shouldJump) {
+                cpu.getRegisters().setPC(address);
+            }
+        } else {
+            cpu.getRegisters().setPC(address);
+        }
+    }
+
     private void processFlags(CPU cpu, OpcodeInfo opcodeInfo, int xVal, int yVal) {
         FlagConditions conditions = flagCalculator.calculateFlags(
-                opcodeInfo.getMnemonic(), xVal, yVal, opcodeInfo.getOperands());
+                cpu, opcodeInfo.getMnemonic(), xVal, yVal, opcodeInfo.getOperands());
         applyFlags(cpu, opcodeInfo.getFlags(), conditions);
     }
 
     /**
-     * Apply flags to CPU based on calculated conditions or opcode info
+     * Apply flags to CPU based on calculated conditions or opcode info.
+     * Flag states are set to their expected values when Opcodes.json indicates "0", "1", or "-" for flag states.
+     * Otherwise, FlagCalculator determines the set flag.
      *
      * @param flags
      * @param conditions
