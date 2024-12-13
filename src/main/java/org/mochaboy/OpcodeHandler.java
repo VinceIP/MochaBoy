@@ -184,7 +184,7 @@ public class OpcodeHandler {
     }
 
     private void CCF(CPU cpu, OpcodeInfo opcodeInfo) {
-        System.out.println("CCF unimpl");
+        cpu.getRegisters().setFlag(Registers.FLAG_CARRY, !cpu.getRegisters().isFlagSet(Registers.FLAG_CARRY));
     }
 
     /**
@@ -217,12 +217,42 @@ public class OpcodeHandler {
     }
 
     private void CPL(CPU cpu, OpcodeInfo opcodeInfo) {
-        System.out.println("CPL unimpl");
+        cpu.getRegisters().setA((~cpu.getRegisters().getA()) & 0xFF);
+        processFlags(cpu, opcodeInfo, 0, 0);
     }
 
     private void DAA(CPU cpu, OpcodeInfo opcodeInfo) {
-        System.out.println("DAA unimpl");
+        //I don't get it. Thanks, ChatGPT.
+        int A = cpu.getRegisters().getA();
+        boolean n = cpu.getRegisters().isFlagSet(Registers.FLAG_SUBTRACT);
+        boolean h = cpu.getRegisters().isFlagSet(Registers.FLAG_HALF_CARRY);
+        boolean c = cpu.getRegisters().isFlagSet(Registers.FLAG_CARRY);
+
+        if (!n) {
+            if (c || A > 0x99) {
+                A += 0x60;
+                c = true;
+            }
+            if (h || (A & 0x0F) > 9) {
+                A += 0x06;
+            }
+        } else {
+            if (c) {
+                A -= 0x60;
+            }
+            if (h) {
+                A -= 0x06;
+            }
+        }
+
+        A &= 0xFF;
+        cpu.getRegisters().setA(A);
+
+        cpu.getRegisters().setFlag(Registers.FLAG_ZERO, A == 0);
+        cpu.getRegisters().clearFlag(Registers.FLAG_HALF_CARRY);
+        cpu.getRegisters().setFlag(Registers.FLAG_CARRY, c);
     }
+
 
     private void DEC(CPU cpu, OpcodeInfo opcodeInfo) {
         Operand xOpr = opcodeInfo.getOperands()[0];
@@ -387,7 +417,7 @@ public class OpcodeHandler {
         }
     }
 
-    private void NOP(CPU cpu, OpcodeInfo opcodeInfo){
+    private void NOP(CPU cpu, OpcodeInfo opcodeInfo) {
     }
 
 

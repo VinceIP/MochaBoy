@@ -100,6 +100,14 @@ public class FlagCalculator {
     }
 
     private void registerMiscCalculators() {
+        calculators.put("CPL", (cpu, xVal, yVal, operands) -> {
+            FlagConditions conditions = new FlagConditions();
+            return conditions;
+        });
+        calculators.put("DAA", (cpu, xVal, yVal, operands) -> {
+            FlagConditions conditions = new FlagConditions();
+            return conditions;
+        });
     }
 
     public FlagConditions calculateFlags(CPU cpu, String mnemonic, int xVal, int yVal, Operand[] operands) {
