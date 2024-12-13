@@ -31,9 +31,18 @@ public class OpcodeHandler {
         mnemonicMap.put("ADD", this::ADD);
         mnemonicMap.put("AND", this::AND);
         mnemonicMap.put("BIT", this::BIT);
-        mnemonicMap.put("CP", this::CP);
         mnemonicMap.put("CALL", this::CALL);
+        mnemonicMap.put("CCF", this::CCF);
+        mnemonicMap.put("CP", this::CP);
+        mnemonicMap.put("CPL", this::CPL);
+        mnemonicMap.put("DAA", this::DAA);
+        mnemonicMap.put("DEC", this::DEC);
+        mnemonicMap.put("DI", this::DI);
+        mnemonicMap.put("EI", this::EI);
+        mnemonicMap.put("HALT", this::HALT);
+        mnemonicMap.put("INC", this::INC);
         mnemonicMap.put("JP", this::JP);
+        mnemonicMap.put("LD", this::LD);
     }
 
     /**
@@ -139,6 +148,45 @@ public class OpcodeHandler {
         processFlags(cpu, opcodeInfo, xVal, yVal);
     }
 
+    private void CALL(CPU cpu, OpcodeInfo opcodeInfo) {
+        // Read the address to jump to (16-bit) from PC+1 and PC+2
+        int callAddress = cpu.getMemory().readWord(cpu.getRegisters().getPC() + 1);
+        int returnAddress = cpu.getRegisters().getPC() + 3; // Next instruction address
+
+        boolean shouldCall = true;
+
+        if (opcodeInfo.getOperands().length > 1) {
+            Operand xOpr = opcodeInfo.getOperands()[0];
+            String condition = xOpr.getName(); // "Z", "NZ", "C", "NC"
+
+            switch (condition) {
+                case "Z":
+                    shouldCall = cpu.getRegisters().isFlagSet(Registers.FLAG_ZERO);
+                    break;
+                case "NZ":
+                    shouldCall = !cpu.getRegisters().isFlagSet(Registers.FLAG_ZERO);
+                    break;
+                case "C":
+                    shouldCall = cpu.getRegisters().isFlagSet(Registers.FLAG_CARRY);
+                    break;
+                case "NC":
+                    shouldCall = !cpu.getRegisters().isFlagSet(Registers.FLAG_CARRY);
+                    break;
+            }
+        }
+
+        if (shouldCall) {
+            cpu.getStack().push(returnAddress);
+            cpu.getRegisters().setPC(callAddress);
+        } else {
+            cpu.getRegisters().setPC(cpu.getRegisters().getPC() + 3);
+        }
+    }
+
+    private void CCF(CPU cpu, OpcodeInfo opcodeInfo) {
+        System.out.println("CCF unimpl");
+    }
+
     /**
      * Subtract value in yOpr from xOpr and set flags accordingly, but don't store the result. For comparing values.
      *
@@ -168,15 +216,86 @@ public class OpcodeHandler {
 
     }
 
-    private void CALL(CPU cpu, OpcodeInfo opcodeInfo) {
-
-        int address = cpu.getMemory().readWord(cpu.getRegisters().getPC());
-        cpu.getRegisters().incrementPC(2);
-        cpu.getStack().push(address);
-
-        JP(cpu, opcodeInfo);
+    private void CPL(CPU cpu, OpcodeInfo opcodeInfo) {
+        System.out.println("CPL unimpl");
     }
 
+    private void DAA(CPU cpu, OpcodeInfo opcodeInfo) {
+        System.out.println("DAA unimpl");
+    }
+
+    private void DEC(CPU cpu, OpcodeInfo opcodeInfo) {
+        Operand xOpr = opcodeInfo.getOperands()[0];
+        int value;
+
+        if (!is8BitRegister(xOpr.getName()) && xOpr.isImmediate()) {
+            value = cpu.getRegisters().getByName(xOpr.getName());
+            int result = (value - 1) & 0xFFFF;
+            cpu.getRegisters().setByName(xOpr.getName(), result);
+            return; // No need to modify flags for 16-bit DEC
+        }
+        if (!xOpr.isImmediate()) {
+            // probably means DEC [HL])
+            value = cpu.getMemory().readByte(cpu.getRegisters().getHL());
+        } else {
+            // Otherwise, it’s a normal 8-bit register
+            value = cpu.getRegisters().getByName(xOpr.getName());
+        }
+
+        int result = (value - 1) & 0xFF; // 8-bit subtraction with wrap-around
+        processFlags(cpu, opcodeInfo, value, 1);
+
+        if (!xOpr.isImmediate()) {
+            // Write back to memory at address [HL]
+            cpu.getMemory().writeByte(cpu.getRegisters().getHL(), result);
+        } else {
+            // Write back to a standard 8-bit register
+            cpu.getRegisters().setByName(xOpr.getName(), result);
+        }
+    }
+
+    private void DI(CPU cpu, OpcodeInfo opcodeInfo) {
+
+    }
+
+    private void EI(CPU cpu, OpcodeInfo opcodeInfo) {
+
+    }
+
+    private void HALT(CPU cpu, OpcodeInfo opcodeInfo) {
+
+    }
+
+    private void INC(CPU cpu, OpcodeInfo opcodeInfo) {
+        Operand xOpr = opcodeInfo.getOperands()[0];
+        int value;
+
+        //For 16-bit registers
+        if (!is8BitRegister(xOpr.getName()) && xOpr.isImmediate()) {
+            value = cpu.getRegisters().getByName(xOpr.getName());
+            int result = (value + 1) & 0xFFFF;
+            cpu.getRegisters().setByName(xOpr.getName(), result);
+            return; // No need to modify flags for 16-bit INC
+        }
+        if (!xOpr.isImmediate()) {
+            // probably means INC [HL])
+            value = cpu.getMemory().readByte(cpu.getRegisters().getHL());
+        } else {
+            // Otherwise, it’s a normal 8-bit register
+            value = cpu.getRegisters().getByName(xOpr.getName());
+        }
+
+        int result = (value + 1) & 0xFF; // 8-bit subtraction with wrap-around
+        processFlags(cpu, opcodeInfo, value, 1);
+
+        if (!xOpr.isImmediate()) {
+            // Write back to memory at address [HL]
+            cpu.getMemory().writeByte(cpu.getRegisters().getHL(), result);
+        } else {
+            // Write back to a standard 8-bit register
+            cpu.getRegisters().setByName(xOpr.getName(), result);
+        }
+    }
 
     private void JP(CPU cpu, OpcodeInfo opcodeInfo) {
         int address = cpu.getMemory().readWord(cpu.getRegisters().getPC());
@@ -209,6 +328,68 @@ public class OpcodeHandler {
             cpu.getRegisters().setPC(address);
         }
     }
+
+    private void LD(CPU cpu, OpcodeInfo opcodeInfo) {
+        Operand xOpr = opcodeInfo.getOperands()[0];
+        Operand yOpr = opcodeInfo.getOperands()[1];
+        int sourceValue = 0;
+        int address = 0;
+
+        //Get value to be copied from Y operand
+        switch (yOpr.getName()) {
+            case "n8":
+                // Load immediate 8-bit value
+                sourceValue = cpu.getMemory().readByte(cpu.getRegisters().getPC());
+                cpu.getRegisters().incrementPC();
+                break;
+
+            case "n16":
+                // Load immediate 16-bit value
+                sourceValue = cpu.getMemory().readWord(cpu.getRegisters().getPC());
+                cpu.getRegisters().incrementPC(2);
+                break;
+
+            case "a16":
+                // Load from absolute 16-bit address
+                address = cpu.getMemory().readWord(cpu.getRegisters().getPC());
+                sourceValue = cpu.getMemory().readByte(address);
+                cpu.getRegisters().incrementPC(2);
+                break;
+            //Otherwise, we are getting a value from a register
+            default:
+                //If the value is not flagged as immediate, we treat this register as a pointer to another address
+                if (!yOpr.isImmediate()) {
+                    if (is8BitRegister(yOpr.getName()))
+                        sourceValue = cpu.getMemory().readByte(cpu.getRegisters().getByName(yOpr.getName()));
+                    else sourceValue = cpu.getMemory().readWord(cpu.getRegisters().getByName(yOpr.getName()));
+                } else {
+                    //Otherwise, pull a value directly from the yOpr's name
+                    sourceValue = cpu.getRegisters().getByName(yOpr.getName());
+                }
+                break;
+        }
+
+        switch (xOpr.getName()) {
+            case "a16":
+                // Store value into absolute 16-bit address
+                address = cpu.getMemory().readWord(cpu.getRegisters().getPC());
+                cpu.getMemory().writeByte(address, sourceValue);
+                cpu.getRegisters().incrementPC(2);
+                break;
+
+            default:
+                if (!xOpr.isImmediate()) {
+                    cpu.getMemory().writeByte(cpu.getRegisters().getByName(xOpr.getName()), sourceValue);
+                } else {
+                    cpu.getRegisters().setByName(xOpr.getName(), sourceValue);
+                }
+                break;
+        }
+    }
+
+    private void NOP(CPU cpu, OpcodeInfo opcodeInfo){
+    }
+
 
     private void processFlags(CPU cpu, OpcodeInfo opcodeInfo, int xVal, int yVal) {
         FlagConditions conditions = flagCalculator.calculateFlags(
@@ -284,7 +465,7 @@ public class OpcodeHandler {
         }
     }
 
-    private boolean is8BitRegister(String register) {
+    public static boolean is8BitRegister(String register) {
         return (register.length() == 1 || register.equals("n8"));
     }
 

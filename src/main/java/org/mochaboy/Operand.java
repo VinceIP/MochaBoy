@@ -4,6 +4,8 @@ public class Operand {
     private String name;
     private int bytes;
     private boolean immediate;
+    private boolean increment;
+    private boolean decrement;
 
     public Operand() {
     }
@@ -30,5 +32,21 @@ public class Operand {
 
     public void setImmediate(boolean immediate) {
         this.immediate = immediate;
+    }
+
+    public boolean isIncrement() {
+        return increment;
+    }
+
+    public void setIncrement(boolean increment) {
+        this.increment = increment;
+    }
+
+    public boolean isDecrement() {
+        return decrement;
+    }
+
+    public void setDecrement(boolean decrement) {
+        this.decrement = decrement;
     }
 }

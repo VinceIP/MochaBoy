@@ -54,6 +54,25 @@ public class FlagCalculator {
             conditions.isCarry = (xVal + yVal + carry) > 0xFF;
             return conditions;
         });
+
+        calculators.put("DEC", (cpu, xVal, yVal, operands) -> {
+            FlagConditions conditions = new FlagConditions();
+            //Flags only affected under these conditions
+            if (OpcodeHandler.is8BitRegister(operands[0].getName()) || operands[0].getName().equals("HL")) {
+                conditions.isZero = ((xVal - yVal) & 0xFF) == 0;
+                conditions.isHalfCarry = ((xVal & 0xF0) < (yVal & 0xF0)) || ((xVal & 0xF) < (yVal & 0xF));
+            }
+            return conditions;
+        });
+
+        calculators.put("INC", (cpu, xVal, yVal, operands) -> {
+            FlagConditions conditions = new FlagConditions();
+            if (OpcodeHandler.is8BitRegister(operands[0].getName()) || operands[0].getName().equals("HL")) {
+                conditions.isZero = ((xVal + yVal) & 0xFF) == 0;
+                conditions.isHalfCarry = (xVal & 0xF) + (yVal & 0xF) > 0xF;
+            }
+            return conditions;
+        });
     }
 
     private void registerBitOperationCalculators() {
