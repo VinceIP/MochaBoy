@@ -51,10 +51,12 @@ public class OpcodeHandler {
         mnemonicMap.put("RET", this::RET);
         mnemonicMap.put("RETI", this::RETI);
         mnemonicMap.put("RL", this::RL);
+        mnemonicMap.put("RLA", this::RLA);
         mnemonicMap.put("RLC", this::RLC);
         mnemonicMap.put("RLCA", this::RLCA);
         mnemonicMap.put("RR", this::RR);
         mnemonicMap.put("RRA", this::RRA);
+        mnemonicMap.put("RRC", this::RRC);
         mnemonicMap.put("RRCA", this::RRCA);
         mnemonicMap.put("RST", this::RST);
         mnemonicMap.put("SBC", this::SBC);
@@ -552,24 +554,94 @@ public class OpcodeHandler {
         }
     }
 
+    private void RLA(CPU cpu, OpcodeInfo opcodeInfo) {
+        int toRotate = cpu.getRegisters().getA();
+        int carryFlag = cpu.getRegisters().isFlagSet(Registers.FLAG_CARRY) ? 1 : 0;
+        int b7 = (toRotate >> 7) & 0x1;
+        int rotated = ((toRotate << 1) | carryFlag) & 0xFF;
+        processFlags(cpu, opcodeInfo, rotated, b7);
+        applyResult(cpu, "A", rotated);
+    }
+
     private void RLC(CPU cpu, OpcodeInfo opcodeInfo) {
-        //
+        Operand xOpr = opcodeInfo.getOperands()[0];
+        int toRotate;
+        boolean toMem = false;
+        if (xOpr.getName().equals("HL")) {
+            toMem = true;
+            toRotate = cpu.getMemory().readByte(cpu.getRegisters().getHL());
+            cpu.getRegisters().incrementPC();
+        } else toRotate = cpu.getRegisters().getByName(xOpr.getName());
+        int b7 = (toRotate >> 7) & 0x1;
+        toRotate = ((toRotate << 1 | b7) & 0xFF);
+        processFlags(cpu, opcodeInfo, toRotate, b7);
+        if (toMem) cpu.getMemory().writeByte(cpu.getRegisters().getHL(), toRotate & 0xFF);
+        else applyResult(cpu, xOpr.getName(), toRotate);
+
     }
 
     private void RLCA(CPU cpu, OpcodeInfo opcodeInfo) {
-        //
+        int toRotate = cpu.getRegisters().getA();
+        int b7 = (toRotate >> 7) & 0x1;
+        int rotated = ((toRotate << 1) | b7) & 0xFF;
+        processFlags(cpu, opcodeInfo, rotated, b7);
+        applyResult(cpu, "A", rotated);
     }
 
     private void RR(CPU cpu, OpcodeInfo opcodeInfo) {
-        //
+        Operand xOpr = opcodeInfo.getOperands()[0];
+        int toRotate;
+        boolean toMem = false;
+        if (xOpr.getName().equals("HL")) {
+            toMem = true;
+            toRotate = cpu.getMemory().readByte(cpu.getRegisters().getHL());
+            cpu.getRegisters().incrementPC();
+        } else {
+            toRotate = cpu.getRegisters().getByName(xOpr.getName());
+        }
+        int b0 = toRotate & 0x1;
+        int carryFlag = cpu.getRegisters().isFlagSet(Registers.FLAG_CARRY) ? 1 : 0;
+        int rotated = ((toRotate >> 1) | (carryFlag << 7)) & 0xFF;
+        processFlags(cpu, opcodeInfo, rotated, b0);
+
+        if (toMem) cpu.getMemory().writeByte(cpu.getRegisters().getHL(), rotated);
+        else applyResult(cpu, xOpr.getName(), rotated);
+
     }
 
     private void RRA(CPU cpu, OpcodeInfo opcodeInfo) {
-        //
+        int toRotate = cpu.getRegisters().getA();
+        int b0 = toRotate & 0x1;
+        int carryFlag = cpu.getRegisters().isFlagSet(Registers.FLAG_CARRY) ? 1 : 0;
+        int rotated = ((toRotate >> 1) | (carryFlag << 7)) & 0xFF;
+        processFlags(cpu, opcodeInfo, rotated, b0);
+        applyResult(cpu, "A", rotated);
+    }
+
+    private void RRC(CPU cpu, OpcodeInfo opcodeInfo) {
+        Operand xOpr = opcodeInfo.getOperands()[0];
+        int toRotate;
+        boolean toMem = false;
+        if (xOpr.getName().equals("HL")) {
+            toMem = true;
+            toRotate = cpu.getMemory().readByte(cpu.getRegisters().getHL());
+            cpu.getRegisters().incrementPC();
+        } else {
+            toRotate = cpu.getRegisters().getByName(xOpr.getName());
+        }
+        int b0 = toRotate & 0x1;
+        int rotated = ((toRotate >> 1) | b0 << 7) & 0xFF;
+        processFlags(cpu, opcodeInfo, rotated, b0);
+        if (toMem) cpu.getMemory().writeByte(cpu.getRegisters().getHL(), rotated);
+        else applyResult(cpu, xOpr.getName(), rotated);
     }
 
     private void RRCA(CPU cpu, OpcodeInfo opcodeInfo) {
-        //
+        int toRotate = cpu.getRegisters().getA();
+        int b0 = toRotate & 0x1;
+        int rotated = ((toRotate >> 1) | b0 << 7) & 0xFF;
+        processFlags(cpu, opcodeInfo, rotated, b0);
+        applyResult(cpu, "A", rotated);
     }
 
     private void RST(CPU cpu, OpcodeInfo opcodeInfo) {

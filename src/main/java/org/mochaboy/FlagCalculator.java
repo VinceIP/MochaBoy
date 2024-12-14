@@ -101,6 +101,51 @@ public class FlagCalculator {
             System.out.println(cpu.getRegisters().isFlagSet(Registers.FLAG_CARRY));
             return conditions;
         });
+
+        calculators.put("RLA", (cpu, xVal, yVal, operands) -> {
+            FlagConditions conditions = new FlagConditions();
+            conditions.isCarry = (yVal == 1);
+            return conditions;
+        });
+
+        calculators.put("RLC", (cpu, xVal, yVal, operands) -> {
+            FlagConditions conditions = new FlagConditions();
+            conditions.isZero = (xVal == 0);
+            conditions.isCarry = (yVal == 1);
+            return conditions;
+        });
+
+        calculators.put("RLCA", (cpu, xVal, yVal, operands) -> {
+            FlagConditions conditions = new FlagConditions();
+            conditions.isCarry = (yVal == 1);
+            return conditions;
+        });
+
+        calculators.put("RR", (cpu, xVal, yVal, operands) -> {
+            FlagConditions conditions = new FlagConditions();
+            conditions.isZero = (xVal == 0);
+            conditions.isCarry = (yVal == 1);
+            return conditions;
+        });
+
+        calculators.put("RRA", (cpu, xVal, yVal, operands) -> {
+            FlagConditions conditions = new FlagConditions();
+            conditions.isCarry = (yVal == 1);
+            return conditions;
+        });
+
+        calculators.put("RRC", (cpu, xVal, yVal, operands) -> {
+            FlagConditions conditions = new FlagConditions();
+            conditions.isZero = (xVal == 0);
+            conditions.isCarry = (yVal == 1);
+            return conditions;
+        });
+
+        calculators.put("RRCA", (cpu, xVal, yVal, operands) -> {
+            FlagConditions conditions = new FlagConditions();
+            conditions.isCarry = (yVal == 1);
+            return conditions;
+        });
     }
 
     private void registerComparisonCalculators() {
