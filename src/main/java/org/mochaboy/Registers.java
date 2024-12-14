@@ -90,6 +90,14 @@ public class Registers {
         E = e;
     }
 
+    public int getF(){
+        return F;
+    }
+
+    public void setF(int value){
+        F = (value & 0xF0);
+    }
+
 
     public int getH() {
         return H;

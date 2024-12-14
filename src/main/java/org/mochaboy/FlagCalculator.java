@@ -87,6 +87,20 @@ public class FlagCalculator {
             conditions.isZero = (yVal & (1 << xVal)) == 0;
             return conditions;
         });
+
+        calculators.put("OR", (cpu, xVal, yVal, operands) -> {
+            FlagConditions conditions = new FlagConditions();
+            conditions.isZero = ((xVal | yVal) & 0xFF) == 0;
+            return conditions;
+        });
+
+        calculators.put("RL", (cpu, xVal, yVal, operands) -> {
+            FlagConditions conditions = new FlagConditions();
+            conditions.isZero = (xVal == 0);
+            conditions.isCarry = (yVal == 1);
+            System.out.println(cpu.getRegisters().isFlagSet(Registers.FLAG_CARRY));
+            return conditions;
+        });
     }
 
     private void registerComparisonCalculators() {
@@ -106,6 +120,22 @@ public class FlagCalculator {
         });
         calculators.put("DAA", (cpu, xVal, yVal, operands) -> {
             FlagConditions conditions = new FlagConditions();
+            return conditions;
+        });
+
+        calculators.put("POP", (cpu, xVal, yVal, operands) -> {
+            FlagConditions conditions = new FlagConditions();
+            int poppedVal = xVal & 0xF0; //Get low byte and zero out lower nibble
+            //Flags are set based on bits in poppedVal
+            cpu.getRegisters().setFlag(Registers.FLAG_ZERO,
+                    (poppedVal & 0x80) > 0
+            );
+            cpu.getRegisters().setFlag(Registers.FLAG_SUBTRACT,
+                    (poppedVal & 0x40) > 0);
+            cpu.getRegisters().setFlag(Registers.FLAG_HALF_CARRY,
+                    (poppedVal & 0x20) > 0);
+            cpu.getRegisters().setFlag(Registers.FLAG_CARRY,
+                    (poppedVal & 0x10) > 0);
             return conditions;
         });
     }

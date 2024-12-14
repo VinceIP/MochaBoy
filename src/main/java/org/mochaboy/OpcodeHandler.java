@@ -43,6 +43,30 @@ public class OpcodeHandler {
         mnemonicMap.put("INC", this::INC);
         mnemonicMap.put("JP", this::JP);
         mnemonicMap.put("LD", this::LD);
+        mnemonicMap.put("NOP", this::NOP);
+        mnemonicMap.put("OR", this::OR);
+        mnemonicMap.put("POP", this::POP);
+        mnemonicMap.put("PUSH", this::PUSH);
+        mnemonicMap.put("RES", this::RES);
+        mnemonicMap.put("RET", this::RET);
+        mnemonicMap.put("RETI", this::RETI);
+        mnemonicMap.put("RL", this::RL);
+        mnemonicMap.put("RLC", this::RLC);
+        mnemonicMap.put("RLCA", this::RLCA);
+        mnemonicMap.put("RR", this::RR);
+        mnemonicMap.put("RRA", this::RRA);
+        mnemonicMap.put("RRCA", this::RRCA);
+        mnemonicMap.put("RST", this::RST);
+        mnemonicMap.put("SBC", this::SBC);
+        mnemonicMap.put("SCF", this::SCF);
+        mnemonicMap.put("SET", this::SET);
+        mnemonicMap.put("SLA", this::SLA);
+        mnemonicMap.put("SRA", this::SRA);
+        mnemonicMap.put("SRL", this::SRL);
+        mnemonicMap.put("STOP", this::STOP);
+        mnemonicMap.put("SUB", this::SUB);
+        mnemonicMap.put("SWAP", this::SWAP);
+        mnemonicMap.put("XOR", this::XOR);
     }
 
     /**
@@ -253,7 +277,6 @@ public class OpcodeHandler {
         cpu.getRegisters().setFlag(Registers.FLAG_CARRY, c);
     }
 
-
     private void DEC(CPU cpu, OpcodeInfo opcodeInfo) {
         Operand xOpr = opcodeInfo.getOperands()[0];
         int value;
@@ -285,15 +308,15 @@ public class OpcodeHandler {
     }
 
     private void DI(CPU cpu, OpcodeInfo opcodeInfo) {
-
+        cpu.setIME(false);
     }
 
     private void EI(CPU cpu, OpcodeInfo opcodeInfo) {
-
+        if (!cpu.isIME()) cpu.setPendingInterruptSwitch(true);
     }
 
     private void HALT(CPU cpu, OpcodeInfo opcodeInfo) {
-
+        if (!cpu.isLowPowerMode()) cpu.setLowPowerMode(true);
     }
 
     private void INC(CPU cpu, OpcodeInfo opcodeInfo) {
@@ -418,6 +441,179 @@ public class OpcodeHandler {
     }
 
     private void NOP(CPU cpu, OpcodeInfo opcodeInfo) {
+        //
+    }
+
+    private void OR(CPU cpu, OpcodeInfo opcodeInfo) {
+        Operand yOpr = opcodeInfo.getOperands()[1];
+        int xVal = cpu.getRegisters().getA();
+        int yVal;
+        switch (yOpr.getName()) {
+            case "n8":
+                yVal = cpu.getMemory().readByte(cpu.getRegisters().getPC());
+                cpu.getRegisters().incrementPC();
+                break;
+            case "HL":
+                yVal = cpu.getMemory().readByte(cpu.getRegisters().getHL());
+                break;
+            default:
+                yVal = cpu.getRegisters().getByName(yOpr.getName());
+                break;
+        }
+
+        int result = xVal | yVal;
+
+        processFlags(cpu, opcodeInfo, xVal, yVal);
+        applyResult(cpu, "A", result);
+    }
+
+    private void POP(CPU cpu, OpcodeInfo opcodeInfo) {
+        Operand xOpr = opcodeInfo.getOperands()[0];
+        int poppedVal = cpu.getStack().pop();
+        //Flags only affected with AF
+        if (xOpr.getName().equals("AF")) {
+            processFlags(cpu, opcodeInfo, poppedVal, 0);
+        }
+        applyResult(cpu, xOpr.getName(), poppedVal);
+    }
+
+    private void PUSH(CPU cpu, OpcodeInfo opcodeInfo) {
+        Operand xOpr = opcodeInfo.getOperands()[0];
+        int pushVal = cpu.getRegisters().getByName(xOpr.getName());
+        cpu.getStack().push(pushVal);
+    }
+
+    private void RES(CPU cpu, OpcodeInfo opcodeInfo) {
+        Operand xOpr = opcodeInfo.getOperands()[0];
+        Operand yOpr = opcodeInfo.getOperands()[1];
+        int target;
+        int u3 = (opcodeInfo.getOpcode() >> 3) & 0b111;
+        if (yOpr.getName().equals("HL")) {
+            target = cpu.getMemory().readByte(cpu.getRegisters().getHL());
+            cpu.getRegisters().incrementPC();
+            int result = target & ~(1 << u3);
+            cpu.getMemory().writeByte(cpu.getRegisters().getHL(), result);
+        } else {
+            target = cpu.getRegisters().getByName(yOpr.getName());
+            int result = target & ~(1 << u3);
+            applyResult(cpu, yOpr.getName(), result);
+        }
+
+    }
+
+    private void RET(CPU cpu, OpcodeInfo opcodeInfo) {
+        int returnAddr = cpu.getStack().pop();
+        boolean shouldRet = true;
+        if (opcodeInfo != null && opcodeInfo.getOperands().length > 0) {
+            Operand xOpr = opcodeInfo.getOperands()[0];
+            String condition = xOpr.getName(); // "Z", "NZ", "C", "NC"
+            switch (condition) {
+                case "Z":
+                    shouldRet = cpu.getRegisters().isFlagSet(Registers.FLAG_ZERO);
+                    break;
+                case "NZ":
+                    shouldRet = !cpu.getRegisters().isFlagSet(Registers.FLAG_ZERO);
+                    break;
+                case "C":
+                    shouldRet = cpu.getRegisters().isFlagSet(Registers.FLAG_CARRY);
+                    break;
+                case "NC":
+                    shouldRet = !cpu.getRegisters().isFlagSet(Registers.FLAG_CARRY);
+                    break;
+            }
+        }
+        if (shouldRet) cpu.getRegisters().setPC(returnAddr);
+        else cpu.getRegisters().incrementPC();
+    }
+
+    private void RETI(CPU cpu, OpcodeInfo opcodeInfo) {
+        EI(cpu, null);
+        RET(cpu, null);
+    }
+
+    private void RL(CPU cpu, OpcodeInfo opcodeInfo) {
+        Operand xOpr = opcodeInfo.getOperands()[0];
+        int toRotate;
+        if (xOpr.getName().equals("HL")) {
+            toRotate = cpu.getMemory().readByte(cpu.getRegisters().getHL());
+            cpu.getRegisters().incrementPC();
+            int b7 = (toRotate >> 7) & 0x1;
+            int carryFlag = cpu.getRegisters().isFlagSet(Registers.FLAG_CARRY) ? 1 : 0;
+            int rotated = ((toRotate << 1) | carryFlag) & 0xFF;
+            processFlags(cpu, opcodeInfo, rotated, b7);
+            cpu.getMemory().writeByte(cpu.getRegisters().getHL(), rotated);
+        } else {
+            toRotate = cpu.getRegisters().getByName(xOpr.getName());
+            int b7 = (toRotate >> 7) & 0x1;
+            int carryFlag = cpu.getRegisters().isFlagSet(Registers.FLAG_CARRY) ? 1 : 0;
+            int rotated = ((toRotate << 1) | carryFlag) & 0xFF;
+            processFlags(cpu, opcodeInfo, rotated, b7);
+            applyResult(cpu, xOpr.getName(), rotated);
+        }
+    }
+
+    private void RLC(CPU cpu, OpcodeInfo opcodeInfo) {
+        //
+    }
+
+    private void RLCA(CPU cpu, OpcodeInfo opcodeInfo) {
+        //
+    }
+
+    private void RR(CPU cpu, OpcodeInfo opcodeInfo) {
+        //
+    }
+
+    private void RRA(CPU cpu, OpcodeInfo opcodeInfo) {
+        //
+    }
+
+    private void RRCA(CPU cpu, OpcodeInfo opcodeInfo) {
+        //
+    }
+
+    private void RST(CPU cpu, OpcodeInfo opcodeInfo) {
+        //
+    }
+
+    private void SBC(CPU cpu, OpcodeInfo opcodeInfo) {
+        //
+    }
+
+    private void SCF(CPU cpu, OpcodeInfo opcodeInfo) {
+        //
+    }
+
+    private void SET(CPU cpu, OpcodeInfo opcodeInfo) {
+        //
+    }
+
+    private void SLA(CPU cpu, OpcodeInfo opcodeInfo) {
+        //
+    }
+
+    private void SRA(CPU cpu, OpcodeInfo opcodeInfo) {
+        //
+    }
+
+    private void SRL(CPU cpu, OpcodeInfo opcodeInfo) {
+        //
+    }
+
+    private void STOP(CPU cpu, OpcodeInfo opcodeInfo) {
+        //
+    }
+
+    private void SUB(CPU cpu, OpcodeInfo opcodeInfo) {
+        //
+    }
+
+    private void SWAP(CPU cpu, OpcodeInfo opcodeInfo) {
+        //
+    }
+
+    private void XOR(CPU cpu, OpcodeInfo opcodeInfo) {
+        //
     }
 
 

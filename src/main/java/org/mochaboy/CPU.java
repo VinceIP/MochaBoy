@@ -6,6 +6,9 @@ public class CPU {
     private Registers registers;
     private Stack stack;
     private long tStateCounter;
+    private boolean IME;
+    private boolean pendingInterruptSwitch;
+    private boolean lowPowerMode;
 
     public CPU(Memory memory) {
         this.memory = memory;
@@ -22,6 +25,8 @@ public class CPU {
             while (registers.getPC() < memory.getMemoryLength()) {
                 int opcode = (fetch() & 0xFF);
                 execute(opcode);
+                //handle pending IME switch
+                //handle HALT
             }
         } catch (OutOfMemoryError e) {
             System.out.println("Out of mem error: " + e.getMessage());
@@ -59,5 +64,30 @@ public class CPU {
 
     public Stack getStack() {
         return stack;
+    }
+
+    public boolean isIME() {
+        return IME;
+    }
+
+    public void setIME(boolean IME) {
+        this.IME = IME;
+    }
+
+    public boolean isPendingInterruptSwitch() {
+        return pendingInterruptSwitch;
+    }
+
+    public void setPendingInterruptSwitch(boolean pendingInterruptSwitch) {
+        this.pendingInterruptSwitch = pendingInterruptSwitch;
+        setIME(true); //GET RID OF THIS LATER
+    }
+
+    public boolean isLowPowerMode() {
+        return lowPowerMode;
+    }
+
+    public void setLowPowerMode(boolean lowPowerMode) {
+        this.lowPowerMode = lowPowerMode;
     }
 }
