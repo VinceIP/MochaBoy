@@ -9,6 +9,7 @@ public class CPU {
     private boolean IME;
     private boolean pendingInterruptSwitch;
     private boolean lowPowerMode;
+    private boolean stopMode;
 
     public CPU(Memory memory) {
         this.memory = memory;
@@ -89,5 +90,13 @@ public class CPU {
 
     public void setLowPowerMode(boolean lowPowerMode) {
         this.lowPowerMode = lowPowerMode;
+    }
+
+    public boolean isStopMode() {
+        return stopMode;
+    }
+
+    public void setStopMode(boolean stopMode) {
+        this.stopMode = stopMode;
     }
 }

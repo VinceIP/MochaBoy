@@ -73,6 +73,23 @@ public class FlagCalculator {
             }
             return conditions;
         });
+
+        calculators.put("SBC", (cpu, xVal, yVal, operands) -> {
+            FlagConditions conditions = new FlagConditions();
+            int carry = cpu.getRegisters().isFlagSet(Registers.FLAG_CARRY) ? 1 : 0;
+            conditions.isZero = ((xVal - (yVal + carry)) & 0xFF) == 0;
+            conditions.isHalfCarry = ((xVal ^ yVal ^ ((xVal - (yVal + carry)) & 0xFF)) & 0x10) != 0; //My brain
+            conditions.isCarry = (yVal + carry) > cpu.getRegisters().getA();
+            return conditions;
+        });
+
+        calculators.put("SUB", (cpu, xVal, yVal, operands) -> {
+            FlagConditions conditions = new FlagConditions();
+            conditions.isZero = ((xVal - (yVal)) & 0xFF) == 0;
+            conditions.isHalfCarry = ((xVal ^ yVal ^ ((xVal - yVal) & 0xFF)) & 0x10) != 0; //My brain
+            conditions.isCarry = (yVal > cpu.getRegisters().getA());
+            return conditions;
+        });
     }
 
     private void registerBitOperationCalculators() {
@@ -146,6 +163,43 @@ public class FlagCalculator {
             conditions.isCarry = (yVal == 1);
             return conditions;
         });
+
+        calculators.put("SLA", (cpu, xVal, yVal, operands) -> {
+            FlagConditions conditions = new FlagConditions();
+            int result = (xVal << 1) & 0xFF;
+            conditions.isZero = (result == 0);
+            conditions.isCarry = ((xVal & 0x80) != 0);
+            return conditions;
+        });
+
+        calculators.put("SRA", (cpu, xVal, yVal, operands) -> {
+            FlagConditions conditions = new FlagConditions();
+            int result = (xVal >> 1) & 0xFF;
+            conditions.isZero = (result == 0);
+            conditions.isCarry = ((xVal & 0x01) != 0);
+            return conditions;
+        });
+
+        calculators.put("SRL", (cpu, xVal, yVal, operands) -> {
+            FlagConditions conditions = new FlagConditions();
+            int result = xVal >> 1;
+            conditions.isZero = (result == 0);
+            conditions.isCarry = ((xVal & 0x1) != 0);
+            return conditions;
+        });
+
+        calculators.put("SWAP", (cpu, xVal, yVal, operands) -> {
+            FlagConditions conditions = new FlagConditions();
+            int result = ((xVal >> 4) | (xVal << 4));
+            conditions.isZero = (result == 0);
+            return conditions;
+        });
+
+        calculators.put("XOR", (cpu, xVal, yVal, operands) -> {
+            FlagConditions conditions = new FlagConditions();
+            conditions.isZero = ((xVal ^ yVal) & 0xFF) == 0;
+            return conditions;
+        });
     }
 
     private void registerComparisonCalculators() {
@@ -157,6 +211,7 @@ public class FlagCalculator {
             return conditions;
         });
     }
+
 
     private void registerMiscCalculators() {
         calculators.put("CPL", (cpu, xVal, yVal, operands) -> {

@@ -166,7 +166,7 @@ public class OpcodeHandler {
         Operand yOpr = opcodeInfo.getOperands()[1];
         //Get u3 from the opcode
         int xVal = (opcodeInfo.getOpcode() >> 3) & 0x07;
-        cpu.getRegisters().incrementPC();
+        //cpu.getRegisters().incrementPC();
         int yVal;
         if (yOpr.getName().equals("HL")) yVal = cpu.getMemory().readByte(cpu.getRegisters().getHL());
         else yVal = cpu.getRegisters().getByName(yOpr.getName());
@@ -645,47 +645,155 @@ public class OpcodeHandler {
     }
 
     private void RST(CPU cpu, OpcodeInfo opcodeInfo) {
-        //
+        int callAddress = ((opcodeInfo.getOpcode() & 0x38) >> 3) * 8;
+        int returnAddress = cpu.getRegisters().getPC() + opcodeInfo.getBytes();
+        cpu.getStack().push(returnAddress);
+        cpu.getRegisters().setPC(callAddress);
     }
 
     private void SBC(CPU cpu, OpcodeInfo opcodeInfo) {
-        //
+        Operand yOpr = opcodeInfo.getOperands()[1];
+        int xVal = cpu.getRegisters().getA();
+        int yVal;
+        int carry = cpu.getRegisters().isFlagSet(Registers.FLAG_CARRY) ? 1 : 0;
+        switch (yOpr.getName()) {
+            case "n8":
+                yVal = cpu.getMemory().readByte(cpu.getRegisters().getPC());
+                cpu.getRegisters().incrementPC();
+                break;
+            case "HL":
+                yVal = cpu.getMemory().readByte(cpu.getRegisters().getHL());
+                break;
+            default:
+                yVal = cpu.getRegisters().getByName(yOpr.getName());
+                break;
+        }
+        int result = xVal - (yVal + carry);
+        processFlags(cpu, opcodeInfo, xVal, yVal);
+        applyResult(cpu, "A", result);
     }
 
     private void SCF(CPU cpu, OpcodeInfo opcodeInfo) {
-        //
+        cpu.getRegisters().setFlag(Registers.FLAG_CARRY);
     }
 
     private void SET(CPU cpu, OpcodeInfo opcodeInfo) {
-        //
+        Operand yOpr = opcodeInfo.getOperands()[1];
+        //Get u3 from opcode - treat as a bit index
+        int xVal = (opcodeInfo.getOpcode() >> 3) & 0x07;
+        //cpu.getRegisters().incrementPC();
+        int yVal;
+        if (yOpr.getName().equals("HL")) yVal = cpu.getMemory().readByte(cpu.getRegisters().getHL());
+        else yVal = cpu.getRegisters().getByName(yOpr.getName());
+        int mask = 1 << xVal;
+        int result = yVal | mask;
+        if (yOpr.getName().equals("HL")) cpu.getMemory().writeByte(cpu.getRegisters().getHL(), result);
+        else applyResult(cpu, yOpr.getName(), result);
     }
 
     private void SLA(CPU cpu, OpcodeInfo opcodeInfo) {
-        //
+        Operand xOpr = opcodeInfo.getOperands()[0];
+        int toShift;
+        boolean isMem = false;
+        if (xOpr.getName().equals("HL")) {
+            isMem = true;
+            toShift = cpu.getMemory().readByte(cpu.getRegisters().getHL());
+        } else toShift = cpu.getRegisters().getByName(xOpr.getName());
+        processFlags(cpu, opcodeInfo, toShift, 0);
+        int result = (toShift << 1);
+        if (isMem) cpu.getMemory().writeByte(cpu.getRegisters().getHL(), result & 0xFF);
+        else applyResult(cpu, xOpr.getName(), result);
     }
 
     private void SRA(CPU cpu, OpcodeInfo opcodeInfo) {
-        //
+        Operand xOpr = opcodeInfo.getOperands()[0];
+        int toShift;
+        boolean isMem = false;
+        if (xOpr.getName().equals("HL")) {
+            isMem = true;
+            toShift = cpu.getMemory().readByte(cpu.getRegisters().getHL());
+        } else toShift = cpu.getRegisters().getByName(xOpr.getName());
+        processFlags(cpu, opcodeInfo, toShift, 0);
+        int result = ((toShift >> 1) | (toShift & 0x80));
+        if (isMem) cpu.getMemory().writeByte(cpu.getRegisters().getHL(), result & 0xFF);
+        else applyResult(cpu, xOpr.getName(), result);
     }
 
     private void SRL(CPU cpu, OpcodeInfo opcodeInfo) {
-        //
+        Operand xOpr = opcodeInfo.getOperands()[0];
+        int toShift;
+        boolean isMem = false;
+        if (xOpr.getName().equals("HL")) {
+            isMem = true;
+            toShift = cpu.getMemory().readByte(cpu.getRegisters().getHL());
+        } else toShift = cpu.getRegisters().getByName(xOpr.getName());
+        processFlags(cpu, opcodeInfo, toShift, 0);
+        int result = (toShift >> 1);
+        if (isMem) cpu.getMemory().writeByte(cpu.getRegisters().getHL(), result & 0xFF);
+        else applyResult(cpu, xOpr.getName(), result);
     }
 
     private void STOP(CPU cpu, OpcodeInfo opcodeInfo) {
-        //
+        cpu.setStopMode(true);
     }
 
     private void SUB(CPU cpu, OpcodeInfo opcodeInfo) {
-        //
+        Operand yOpr = opcodeInfo.getOperands()[1];
+        int xVal = cpu.getRegisters().getA();
+        int yVal;
+        switch (yOpr.getName()) {
+            case "n8":
+                yVal = cpu.getMemory().readByte(cpu.getRegisters().getPC());
+                cpu.getRegisters().incrementPC();
+                break;
+            case "HL":
+                yVal = cpu.getMemory().readByte(cpu.getRegisters().getHL());
+                break;
+            default:
+                yVal = cpu.getRegisters().getByName(yOpr.getName());
+                break;
+        }
+        int result = xVal - yVal;
+        processFlags(cpu, opcodeInfo, xVal, yVal);
+        applyResult(cpu, "A", result);
     }
 
     private void SWAP(CPU cpu, OpcodeInfo opcodeInfo) {
-        //
+        Operand xOpr = opcodeInfo.getOperands()[0];
+        int xVal;
+        boolean isMem = false;
+        if (xOpr.getName().equals("HL")) {
+            isMem = true;
+            xVal = cpu.getMemory().readByte(cpu.getRegisters().getHL());
+        } else {
+            xVal = cpu.getRegisters().getByName(xOpr.getName());
+        }
+
+        int result = ((xVal >> 4) | (xVal << 4));
+        processFlags(cpu, opcodeInfo, xVal, 0);
+        if (isMem) cpu.getMemory().writeByte(cpu.getRegisters().getHL(), result & 0xFF);
+        else applyResult(cpu, xOpr.getName(), result);
     }
 
     private void XOR(CPU cpu, OpcodeInfo opcodeInfo) {
-        //
+        Operand yOpr = opcodeInfo.getOperands()[1];
+        int xVal = cpu.getRegisters().getA();
+        int yVal;
+        switch (yOpr.getName()) {
+            case "n8":
+                yVal = cpu.getMemory().readByte(cpu.getRegisters().getPC());
+                cpu.getRegisters().incrementPC();
+                break;
+            case "HL":
+                yVal = cpu.getMemory().readByte(cpu.getRegisters().getHL());
+                break;
+            default:
+                yVal = cpu.getRegisters().getByName(yOpr.getName());
+                break;
+        }
+        int result = xVal ^ yVal;
+        processFlags(cpu, opcodeInfo, xVal, yVal);
+        applyResult(cpu, "A", result);
     }
 
 

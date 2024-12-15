@@ -1,7 +1,6 @@
-package org.mochaboy;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mochaboy.*;
 
 import java.io.File;
 import java.io.IOException;
