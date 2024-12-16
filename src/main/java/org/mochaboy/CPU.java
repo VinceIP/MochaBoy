@@ -1,31 +1,37 @@
 package org.mochaboy;
 
+import java.io.IOException;
+
 public class CPU {
 
     private Memory memory;
     private Registers registers;
     private Stack stack;
+    private OpcodeLoader opcodeLoader;
+    private OpcodeWrapper opcodeWrapper;
+    private OpcodeHandler opcodeHandler;
     private long tStateCounter;
     private boolean IME;
     private boolean pendingInterruptSwitch;
     private boolean lowPowerMode;
     private boolean stopMode;
 
-    public CPU(Memory memory) {
+    public CPU(Memory memory) throws IOException {
         this.memory = memory;
         this.registers = new Registers();
         stack = new Stack(this);
+        opcodeLoader = new OpcodeLoader();
+        opcodeWrapper = opcodeLoader.getOpcodeWrapper();
+        opcodeHandler = new OpcodeHandler(opcodeWrapper);
     }
 
-    private void init() {
-
-    }
 
     public void run() {
         try {
             while (registers.getPC() < memory.getMemoryLength()) {
-                int opcode = (fetch() & 0xFF);
+                OpcodeInfo opcode = fetch();
                 execute(opcode);
+                getRegisters().incrementPC();
                 //handle pending IME switch
                 //handle HALT
             }
@@ -35,12 +41,24 @@ public class CPU {
 
     }
 
-    public byte fetch() {
-        return (byte) (memory.readByte(registers.getPC()) & 0xFF);
+    public OpcodeInfo fetch() {
+        int opcode = memory.readByte(registers.getPC()) & 0xFF;
+        OpcodeInfo opcodeInfo;
+        String hexString;
+        if (opcode == 0xCB) {
+            getRegisters().incrementPC();
+            opcode = memory.readByte(registers.getPC()) & 0xFF;
+            hexString = String.format("0x%02X", opcode);
+            opcodeInfo = opcodeWrapper.getCbprefixed().get(hexString);
+        } else {
+            hexString = String.format("0x%02X", opcode);
+            opcodeInfo = opcodeWrapper.getUnprefixed().get(hexString);
+        }
+        return opcodeInfo;
     }
 
-    public void execute(int opcode) {
-        //OpcodeHandler.execute(this, opcode);
+    public void execute(OpcodeInfo opcodeInfo) {
+        opcodeHandler.execute(this, opcodeInfo);
     }
 
     public Memory getMemory() {

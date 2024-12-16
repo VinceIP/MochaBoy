@@ -238,6 +238,13 @@ public class FlagCalculator {
                     (poppedVal & 0x10) > 0);
             return conditions;
         });
+
+        calculators.put("LD", (cpu, xVal, yVal, operands) -> {
+            FlagConditions conditions = new FlagConditions();
+            conditions.isHalfCarry = (((xVal & 0x0FFF) + (yVal & 0x0FFF)) & 0x1000) != 0;
+            conditions.isCarry = ((xVal & 0xFFFF) + (yVal & 0xFFFF)) > 0xFFFF;
+            return conditions;
+        });
     }
 
     public FlagConditions calculateFlags(CPU cpu, String mnemonic, int xVal, int yVal, Operand[] operands) {
