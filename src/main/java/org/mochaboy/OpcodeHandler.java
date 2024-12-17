@@ -42,7 +42,9 @@ public class OpcodeHandler {
         mnemonicMap.put("HALT", this::HALT);
         mnemonicMap.put("INC", this::INC);
         mnemonicMap.put("JP", this::JP);
+        mnemonicMap.put("JR", this::JR);
         mnemonicMap.put("LD", this::LD);
+        mnemonicMap.put("LDH", this::LDH);
         mnemonicMap.put("NOP", this::NOP);
         mnemonicMap.put("OR", this::OR);
         mnemonicMap.put("POP", this::POP);
@@ -355,56 +357,66 @@ public class OpcodeHandler {
     private void JP(CPU cpu, OpcodeInfo opcodeInfo) {
         int address = cpu.getMemory().readWord(cpu.getRegisters().getPC());
         cpu.getRegisters().incrementPC(2);
-
+        boolean shouldJump = false;
         if (opcodeInfo.getOperands().length > 1) {
             Operand xOpr = opcodeInfo.getOperands()[0];
             String condition = xOpr.getName(); // "Z", "NZ", "C", "NC"
 
-            boolean shouldJump = false;
-            switch (condition) {
-                case "Z":
-                    shouldJump = cpu.getRegisters().isFlagSet(Registers.FLAG_ZERO);
-                    break;
-                case "NZ":
-                    shouldJump = !cpu.getRegisters().isFlagSet(Registers.FLAG_ZERO);
-                    break;
-                case "C":
-                    shouldJump = cpu.getRegisters().isFlagSet(Registers.FLAG_CARRY);
-                    break;
-                case "NC":
-                    shouldJump = !cpu.getRegisters().isFlagSet(Registers.FLAG_CARRY);
-                    break;
-            }
-
-            if (shouldJump) {
-                cpu.getRegisters().setPC(address);
-            }
-        } else {
+            shouldJump = switch (condition) {
+                case "Z" -> cpu.getRegisters().isFlagSet(Registers.FLAG_ZERO);
+                case "NZ" -> !cpu.getRegisters().isFlagSet(Registers.FLAG_ZERO);
+                case "C" -> cpu.getRegisters().isFlagSet(Registers.FLAG_CARRY);
+                case "NC" -> !cpu.getRegisters().isFlagSet(Registers.FLAG_CARRY);
+                default -> false;
+            };
+        }
+        if (shouldJump) {
             cpu.getRegisters().setPC(address);
+            cpu.setDidJump(true);
         }
     }
 
+    private void JR(CPU cpu, OpcodeInfo opcodeInfo) {
+        Operand xOpr = opcodeInfo.getOperands()[0];
+        Operand yOpr;
+        boolean shouldJump = false;
+        byte e8 = (byte) cpu.getMemory().readByte(cpu.getRegisters().getPC() + 1);
+        cpu.getRegisters().incrementPC(2);
+        if (opcodeInfo.getOperands().length > 1) {
+            shouldJump = switch (xOpr.getName()) {
+                case "Z" -> cpu.getRegisters().isFlagSet(Registers.FLAG_ZERO);
+                case "NZ" -> !cpu.getRegisters().isFlagSet(Registers.FLAG_ZERO);
+                case "C" -> cpu.getRegisters().isFlagSet(Registers.FLAG_CARRY);
+                case "NC" -> !cpu.getRegisters().isFlagSet(Registers.FLAG_CARRY);
+                default -> false;
+            };
+        } else shouldJump = true;
+
+        if (shouldJump) {
+            cpu.getRegisters().setPC((cpu.getRegisters().getPC() + e8) & 0xFFFF);
+            cpu.setDidJump(true);
+        }
+
+    }
+
     private void LD(CPU cpu, OpcodeInfo opcodeInfo) {
-        //TODO: Increment/decrement the value of the source or destination register after the copy is performed
-        //(not the value that has been copied
         Operand destOpr = opcodeInfo.getOperands()[0];
         Operand sourceOpr = opcodeInfo.getOperands()[1];
         int value = 0;
         int basePC = cpu.getRegisters().getPC();
-        boolean sourceIs8Bits = false;
+        incDec incDecState = incDec.NULL;
 
         //Get value to be copied from Y operand
         switch (sourceOpr.getName()) {
             //Given 8-bit value
             case "n8":
-                sourceIs8Bits = true;
                 value = cpu.getMemory().readByte(cpu.getRegisters().getPC());
                 cpu.getRegisters().incrementPC();
                 break;
             //[n16] or n16
             case "n16":
                 //Is value immediate or a pointer?
-                if (sourceOpr.isImmediate()) value = cpu.getMemory().readWord(cpu.getRegisters().getPC());
+                if (sourceOpr.isImmediate()) value = cpu.getMemory().readWord(cpu.getRegisters().getPC() + 1);
                 else value = cpu.getMemory().readWord(cpu.getRegisters().getByName(sourceOpr.getName()));
                 cpu.getRegisters().incrementPC(2);
                 break;
@@ -419,6 +431,8 @@ public class OpcodeHandler {
             case "BC":
             case "DE":
             case "HL":
+                if (sourceOpr.isIncrement()) incDecState = incDec.INC_RIGHT;
+                else if (sourceOpr.isDecrement()) incDecState = incDec.DEC_RIGHT;
             case "SP":
                 //LD HL, SP+e8
                 if (opcodeInfo.getOperands().length > 2) {
@@ -431,7 +445,6 @@ public class OpcodeHandler {
                 break;
             //r8
             default:
-                sourceIs8Bits = true;
                 value = cpu.getRegisters().getByName(sourceOpr.getName()) & 0xFF;
                 break;
         }
@@ -439,6 +452,7 @@ public class OpcodeHandler {
         //Copy value to target location
         switch (destOpr.getName()) {
             case "n16":
+            case "a16":
                 //Is always an address
                 int targetAddress = cpu.getMemory().readWord(basePC); //Read the value before PC was inc above
                 cpu.getMemory().writeWord(targetAddress, value);
@@ -447,6 +461,8 @@ public class OpcodeHandler {
             case "BC":
             case "DE":
             case "HL":
+                if (destOpr.isIncrement()) incDecState = incDec.INC_LEFT;
+                else if (destOpr.isDecrement()) incDecState = incDec.DEC_LEFT;
             case "SP":
                 if (destOpr.isImmediate()) {
                     cpu.getRegisters().setByName(destOpr.getName(), (value &
@@ -467,6 +483,24 @@ public class OpcodeHandler {
                 }
                 break;
         }
+
+        if (incDecState != incDec.NULL) {
+            switch (incDecState) {
+                case DEC_LEFT:
+                case DEC_RIGHT:
+                    cpu.getRegisters().setByName("HL", (cpu.getRegisters().getHL() - 1) & 0xFFFF);
+                    break;
+                case INC_LEFT:
+                case INC_RIGHT:
+                    cpu.getRegisters().setByName("HL", (cpu.getRegisters().getHL() + 1) & 0xFFFF);
+                    break;
+            }
+        }
+    }
+
+    private void LDH(CPU cpu, OpcodeInfo opcodeInfo) {
+        System.out.println("implement LDH, please :(");
+        Operand destOpr = opcodeInfo.getOperands()[0];
     }
 
     private void NOP(CPU cpu, OpcodeInfo opcodeInfo) {
@@ -904,6 +938,14 @@ public class OpcodeHandler {
     private void applyResult(CPU cpu, String register, int result) {
         //Mask result depending on bit size of register
         cpu.getRegisters().setByName(register, (is8BitRegister(register) ? result & 0xFF : result & 0xFFFF));
+    }
+
+    private enum incDec {
+        NULL,
+        INC_LEFT,
+        INC_RIGHT,
+        DEC_LEFT,
+        DEC_RIGHT
     }
 
 }

@@ -115,7 +115,6 @@ public class FlagCalculator {
             FlagConditions conditions = new FlagConditions();
             conditions.isZero = (xVal == 0);
             conditions.isCarry = (yVal == 1);
-            System.out.println(cpu.getRegisters().isFlagSet(Registers.FLAG_CARRY));
             return conditions;
         });
 

@@ -16,7 +16,7 @@ public class Memory {
 
     public void init() {
         //Put cart ROM into memory
-        loadCart(cartridge);
+        //loadCart(cartridge);
         //Loaded on top of cart
         loadBootRom();
     }

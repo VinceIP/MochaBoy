@@ -195,6 +195,7 @@ public class Registers {
     }
 
     public int getByName(String name) {
+        if(registerGettersMap.get(name).get() == null) throw new NullPointerException("Invalid register name: " + name );
         return registerGettersMap.get(name).get();
     }
 

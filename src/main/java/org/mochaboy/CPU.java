@@ -15,6 +15,7 @@ public class CPU {
     private boolean pendingInterruptSwitch;
     private boolean lowPowerMode;
     private boolean stopMode;
+    private boolean didJump;
 
     public CPU(Memory memory) throws IOException {
         this.memory = memory;
@@ -31,10 +32,13 @@ public class CPU {
             while (registers.getPC() < memory.getMemoryLength()) {
                 OpcodeInfo opcode = fetch();
                 execute(opcode);
-                getRegisters().incrementPC();
+                if (!didJump) {
+                    getRegisters().incrementPC();
+                } else didJump = false;
                 //handle pending IME switch
                 //handle HALT
             }
+            System.exit(0);
         } catch (OutOfMemoryError e) {
             System.out.println("Out of mem error: " + e.getMessage());
         }
@@ -116,5 +120,13 @@ public class CPU {
 
     public void setStopMode(boolean stopMode) {
         this.stopMode = stopMode;
+    }
+
+    public boolean isDidJump() {
+        return didJump;
+    }
+
+    public void setDidJump(boolean didJump) {
+        this.didJump = didJump;
     }
 }
