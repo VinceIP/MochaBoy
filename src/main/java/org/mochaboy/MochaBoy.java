@@ -13,17 +13,20 @@ public class MochaBoy {
 //            System.out.println("MochaBoy usage: 'MochaBoy *.gb");
 //            return;
 //        } else {
-            //String romFile = args[0];
-            String romFile = "./././Tetris.gb";
-            Path path = Paths.get(romFile);
-            try {
-                Cartridge cartridge = new Cartridge(path);
-                Memory memory = new Memory(cartridge);
-                CPU cpu = new CPU(memory);
-                cpu.run();
-            } catch (IOException e) {
-                System.out.println("IOException reading cart.");
-            }
+        //String romFile = args[0];
+        String romFile = "./././Tetris.gb";
+        Path path = Paths.get(romFile);
+        try {
+            Cartridge cartridge = new Cartridge(path);
+            Memory memory = new Memory(cartridge);
+            CPU cpu = new CPU(memory);
+            cpu.start();
+            GUIEmulator gui = new GUIEmulator();
+            gui.run();
+            cpu.stopCPU();
+        } catch (IOException e) {
+            System.out.println("IOException reading cart.");
+        }
 
         //}
 

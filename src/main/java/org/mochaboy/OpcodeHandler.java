@@ -499,8 +499,17 @@ public class OpcodeHandler {
     }
 
     private void LDH(CPU cpu, OpcodeInfo opcodeInfo) {
-        System.out.println("implement LDH, please :(");
-        Operand destOpr = opcodeInfo.getOperands()[0];
+        Operand xOpr = opcodeInfo.getOperands()[0];
+        Operand yOpr = opcodeInfo.getOperands()[1];
+        int a8 = cpu.getMemory().readByte(cpu.getRegisters().getPC() + 1);
+        cpu.getRegisters().incrementPC();
+        if (xOpr.getName().equals("a8")) {
+            int address = 0xFF00 + (a8 & 0xFF);
+            cpu.getMemory().writeByte(address, cpu.getRegisters().getA());
+        } else {
+            int value = cpu.getMemory().readByte(0xFF00 + a8);
+            cpu.getRegisters().setA(value);
+        }
     }
 
     private void NOP(CPU cpu, OpcodeInfo opcodeInfo) {

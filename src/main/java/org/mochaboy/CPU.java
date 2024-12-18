@@ -2,7 +2,7 @@ package org.mochaboy;
 
 import java.io.IOException;
 
-public class CPU {
+public class CPU extends Thread {
 
     private Memory memory;
     private Registers registers;
@@ -16,6 +16,7 @@ public class CPU {
     private boolean lowPowerMode;
     private boolean stopMode;
     private boolean didJump;
+    private boolean running;
 
     public CPU(Memory memory) throws IOException {
         this.memory = memory;
@@ -26,24 +27,31 @@ public class CPU {
         opcodeHandler = new OpcodeHandler(opcodeWrapper);
     }
 
-
+    @Override
     public void run() {
-        try {
-            while (registers.getPC() < memory.getMemoryLength()) {
-                OpcodeInfo opcode = fetch();
-                execute(opcode);
-                if (!didJump) {
-                    getRegisters().incrementPC();
-                } else didJump = false;
-                //handle pending IME switch
-                //handle HALT
+        running = true;
+        while (running) {
+            System.out.printf("0x%04X\n", getRegisters().getPC());
+            OpcodeInfo opcode = fetch();
+            execute(opcode);
+            if (!didJump) {
+                getRegisters().incrementPC();
+            } else didJump = false;
+            //handle pending IME switch
+            //handle HALT
+            try {
+                Thread.sleep(1);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
-            System.exit(0);
-        } catch (OutOfMemoryError e) {
-            System.out.println("Out of mem error: " + e.getMessage());
         }
 
     }
+
+    public void stopCPU(){
+        running = false;
+    }
+
 
     public OpcodeInfo fetch() {
         int opcode = memory.readByte(registers.getPC()) & 0xFF;

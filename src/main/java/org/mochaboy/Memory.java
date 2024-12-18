@@ -2,14 +2,18 @@ package org.mochaboy;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.HashMap;
+import java.util.Map;
 
 public class Memory {
 
     private byte[] memory;
     private Cartridge cartridge;
+    private MemoryMap memoryMap;
 
     public Memory(Cartridge cartridge) {
         this.cartridge = cartridge;
+        memoryMap = new MemoryMap();
         memory = new byte[0x10000];
         init();
     }
@@ -91,5 +95,7 @@ public class Memory {
         return memory.length;
     }
 
-
+    public Map<String, Integer> getMemoryMap() {
+        return memoryMap.getMap();
+    }
 }
