@@ -20,6 +20,7 @@ public class CPU extends Thread {
     private int totalCycles;
     private static final int CYCLES_PER_FRAME = 70224;
     private static final double FRAME_TIME_MS = 1000.0 / 59.7275;
+    private boolean runOnce = false;
 
     public CPU(PPU ppu, Memory memory) throws IOException {
         this.ppu = ppu;
@@ -40,24 +41,10 @@ public class CPU extends Thread {
             int pc = registers.getPC();
             //System.out.printf("PC: 0x%04X\n", pc);
 
-            // In your CPU, when executing LD (HL) in the logo check loop:
-//            if (pc == 0x00E8) {
-//                System.out.println("Logo Check: Comparing cart data: 0x" + String.format("%02X", memory.readByte(registers.getHL())) +
-//                        " with boot ROM data: 0x" + String.format("%02X", memory.readByte(registers.getDE())));
-//            }
-
-// In your CPU, when executing ADD (HL) in the checksum check loop:
-//            if (pc == 0x00F4 || pc == 0x00F9) {
-//                System.out.println("Checksum Check: Adding value from address 0x" + String.format("%04X", registers.getHL()) +
-//                        ": 0x" + String.format("%02X", memory.readByte(registers.getHL())));
-//            }
-
-//            if (pc == 0x00F9) {
-//                System.out.println("Checksum Result (Lower Byte): 0x" + String.format("%02X", registers.getA()));
-//            }
-
+            if(pc == 0x00fe){
+                System.out.println("here");
+            }
             int cycles = execute(opcode);
-
 
             if (!didJump) {
                 //getRegisters().incrementPC();

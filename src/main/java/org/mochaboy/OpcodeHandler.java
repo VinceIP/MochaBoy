@@ -118,9 +118,12 @@ public class OpcodeHandler {
 
         int xVal = cpu.getRegisters().getByName(xOpr.getName());
         int yVal;
+        int pc = cpu.getRegisters().getPC();
+        Registers registers = cpu.getRegisters();
+        Memory memory = cpu.getMemory();
         switch (yOpr.getName()) {
             case "n8":
-                yVal = cpu.getMemory().readByte(cpu.getRegisters().getPC());
+                yVal = cpu.getMemory().readByte(cpu.getRegisters().getPC() + 1);
                 cpu.getRegisters().incrementPC();
                 break;
             case "e8":
@@ -137,7 +140,6 @@ public class OpcodeHandler {
         int result = xVal + yVal;
         processFlags(cpu, opcodeInfo, xVal, yVal);
         applyResult(cpu, xOpr.getName(), result);
-
     }
 
     private void AND(CPU cpu, OpcodeInfo opcodeInfo) {
@@ -245,7 +247,6 @@ public class OpcodeHandler {
         }
 
         processFlags(cpu, opcodeInfo, xVal, yVal);
-
     }
 
     private void CPL(CPU cpu, OpcodeInfo opcodeInfo) {
@@ -408,7 +409,7 @@ public class OpcodeHandler {
         switch (sourceOpr.getName()) {
             //Given 8-bit value
             case "n8":
-                value = cpu.getMemory().readByte(cpu.getRegisters().getPC()+1);
+                value = cpu.getMemory().readByte(cpu.getRegisters().getPC() + 1);
                 cpu.getRegisters().incrementPC();
                 break;
             //[n16] or n16

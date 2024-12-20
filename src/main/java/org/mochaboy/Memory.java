@@ -111,7 +111,7 @@ public class Memory {
                         cartridge.getCartData()[2],
                         cartridge.getCartData()[3]));
 
-        System.arraycopy(cartData, 0, memory, 0, Math.min(0x4000, cartData.length));
+        System.arraycopy(cartData, 0x0000, memory, 0x0000, 0xFFFF/2);
 
         System.out.println("First few bytes of memory after loading ROM: " +
                 String.format("0x%02X 0x%02X 0x%02X 0x%02X",
@@ -123,6 +123,14 @@ public class Memory {
 
     public int getMemoryLength() {
         return memory.length;
+    }
+
+    public boolean isBootRomEnabled() {
+        return bootRomEnabled;
+    }
+
+    public void setBootRomEnabled(boolean bootRomEnabled) {
+        this.bootRomEnabled = bootRomEnabled;
     }
 
     public Map<String, Integer> getMemoryMap() {

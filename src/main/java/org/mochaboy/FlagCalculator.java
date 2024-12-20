@@ -35,6 +35,7 @@ public class FlagCalculator {
                 case "HL":
                 case "SP":
                 case "PC":
+                    conditions.isZero = ((xVal + yVal) & 0xFF) == 0;
                     conditions.isHalfCarry = (((xVal & 0x0FFF) + (yVal & 0x0FFF)) & 0x1000) != 0;
                     conditions.isCarry = ((xVal & 0xFFFF) + (yVal & 0xFFFF)) > 0xFFFF;
                     break;
