@@ -182,11 +182,12 @@ public class OpcodeHandler {
     private void CALL(CPU cpu, OpcodeInfo opcodeInfo) {
         // Read the address to jump to (16-bit) from PC+1 and PC+2
         int callAddress = cpu.getMemory().readWord(cpu.getRegisters().getPC() + 1);
-        cpu.getRegisters().incrementPC();
-        int returnAddress = cpu.getRegisters().getPC() + 2; // Next instruction address
+        // Calculate the return address as the current PC + 3 (length of the CALL instruction)
+        int returnAddress = cpu.getRegisters().getPC() + 3;
 
         boolean shouldCall = true;
 
+        // Check for conditional CALL
         if (opcodeInfo.getOperands().length > 1) {
             Operand xOpr = opcodeInfo.getOperands()[0];
             String condition = xOpr.getName(); // "Z", "NZ", "C", "NC"
@@ -208,12 +209,15 @@ public class OpcodeHandler {
         }
 
         if (shouldCall) {
+            // Push the return address onto the stack
             cpu.getStack().push(returnAddress);
+            // Set the PC to the call address
             cpu.getRegisters().setPC(callAddress);
+            // Indicate that a jump occurred
             cpu.setDidJump(true);
-        } else {
-            //cpu.getRegisters().setPC(cpu.getRegisters().getPC() + 3);
         }
+        // If the condition is not met, we do nothing here;
+        // The PC will be incremented correctly in the CPU's run() method because didJump is false
     }
 
     private void CCF(CPU cpu, OpcodeInfo opcodeInfo) {
@@ -405,18 +409,20 @@ public class OpcodeHandler {
         int basePC = cpu.getRegisters().getPC();
         incDec incDecState = incDec.NULL;
 
-        //Get value to be copied from Y operand
+        // Get value to be copied from Y operand
         switch (sourceOpr.getName()) {
-            //Given 8-bit value
+            // Given 8-bit value
             case "n8":
                 value = cpu.getMemory().readByte(cpu.getRegisters().getPC() + 1);
                 cpu.getRegisters().incrementPC();
                 break;
-            //[n16] or n16
+            // [n16] or n16
             case "n16":
-                //Is value immediate or a pointer?
-                if (sourceOpr.isImmediate()) value = cpu.getMemory().readWord(cpu.getRegisters().getPC() + 1);
-                else value = cpu.getMemory().readWord(cpu.getRegisters().getByName(sourceOpr.getName()));
+                // Is value immediate or a pointer?
+                if (sourceOpr.isImmediate())
+                    value = cpu.getMemory().readWord(cpu.getRegisters().getPC() + 1);
+                else
+                    value = cpu.getMemory().readWord(cpu.getRegisters().getByName(sourceOpr.getName()));
                 cpu.getRegisters().incrementPC(2);
                 break;
             case "a16":
@@ -425,62 +431,71 @@ public class OpcodeHandler {
                 value = cpu.getMemory().readByte(address);
                 cpu.getRegisters().incrementPC(2);
                 break;
-            //[r16], r16, or SP+e8
+            // [r16], r16, or SP+e8
             case "AF":
             case "BC":
             case "DE":
             case "HL":
-                if (sourceOpr.isIncrement()) incDecState = incDec.INC_RIGHT;
-                else if (sourceOpr.isDecrement()) incDecState = incDec.DEC_RIGHT;
+                if (sourceOpr.isIncrement())
+                    incDecState = incDec.INC_RIGHT;
+                else if (sourceOpr.isDecrement())
+                    incDecState = incDec.DEC_RIGHT;
+                if (!sourceOpr.isImmediate())
+                    value = cpu.getMemory().readByte(cpu.getRegisters().getByName(sourceOpr.getName()));
+                else
+                    value = cpu.getRegisters().getByName(sourceOpr.getName());
+                break;
             case "SP":
-                //LD HL, SP+e8
+                // LD HL, SP+e8
                 if (opcodeInfo.getOperands().length > 2) {
                     byte e8 = (byte) cpu.getMemory().readByte(basePC + 1);
                     cpu.getRegisters().incrementPC();
                     int sp = cpu.getRegisters().getSP();
                     value = (sp + e8) & 0xFFFF;
-                    processFlags(cpu, opcodeInfo, sp, e8); //Flags are set only here
-                } else if (sourceOpr.isImmediate()) value = cpu.getRegisters().getByName(sourceOpr.getName()) & 0xFFFF;
-                else value = cpu.getMemory().readByte(cpu.getRegisters().getHL()) & 0xFF;
+                    processFlags(cpu, opcodeInfo, sp, e8); // Flags are set only here
+                }
                 break;
-            //r8
+            // r8
             default:
                 value = cpu.getRegisters().getByName(sourceOpr.getName()) & 0xFF;
                 break;
         }
 
-        //Copy value to target location
+        // Copy value to target location
         switch (destOpr.getName()) {
             case "n16":
             case "a16":
-                //Is always an address
-                int targetAddress = cpu.getMemory().readWord(basePC); //Read the value before PC was inc above
+                // Is always an address
+                int targetAddress = cpu.getMemory().readWord(basePC); // Read the value before PC was inc above
                 cpu.getMemory().writeWord(targetAddress, value);
                 break;
+            // [r16]
             case "AF":
             case "BC":
             case "DE":
             case "HL":
-                if (destOpr.isIncrement()) incDecState = incDec.INC_LEFT;
-                else if (destOpr.isDecrement()) incDecState = incDec.DEC_LEFT;
+                if (destOpr.isIncrement())
+                    incDecState = incDec.INC_LEFT;
+                else if (destOpr.isDecrement())
+                    incDecState = incDec.DEC_LEFT;
+                if (!destOpr.isImmediate()) {
+                    cpu.getMemory().writeWord(cpu.getRegisters().getByName(destOpr.getName()), value);
+                } else
+                    cpu.getRegisters().setByName(destOpr.getName(), (value &
+                            (is8BitRegister(destOpr.getName()) ? 0xFF : 0xFFFF)));
+                break;
             case "SP":
                 if (destOpr.isImmediate()) {
                     cpu.getRegisters().setByName(destOpr.getName(), (value &
                             (is8BitRegister(destOpr.getName()) ? 0xFF : 0xFFFF)));
-                } else cpu.getMemory().writeWord(cpu.getRegisters().getByName(destOpr.getName()), value);
+                } else
+                    cpu.getMemory().writeWord(cpu.getRegisters().getByName(destOpr.getName()), value);
                 break;
             default:
-                if (!destOpr.isImmediate()) {
-                    if ((is8BitRegister(destOpr.getName()))) {
-                        cpu.getMemory().writeByte(cpu.getRegisters().getByName(destOpr.getName()), value);
-                    } else {
-                        cpu.getMemory().writeWord(cpu.getRegisters().getByName(destOpr.getName()), value);
-                    }
-                } else {
-                    if (is8BitRegister(destOpr.getName()))
-                        cpu.getRegisters().setByName(destOpr.getName(), value & 0xFF);
-                    else cpu.getRegisters().setByName(destOpr.getName(), value & 0xFFFF);
-                }
+                if (is8BitRegister(destOpr.getName()))
+                    cpu.getRegisters().setByName(destOpr.getName(), value & 0xFF);
+                else
+                    cpu.getRegisters().setByName(destOpr.getName(), value & 0xFFFF);
                 break;
         }
 

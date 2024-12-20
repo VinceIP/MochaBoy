@@ -19,4 +19,12 @@ public class FrameBuffer {
     public synchronized int[] getPixels(){
         return pixels.clone();
     }
+
+    public int getWidth() {
+        return width;
+    }
+
+    public int getHeight() {
+        return height;
+    }
 }

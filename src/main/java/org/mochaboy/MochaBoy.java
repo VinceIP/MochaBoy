@@ -19,10 +19,11 @@ public class MochaBoy {
         try {
             Cartridge cartridge = new Cartridge(path);
             Memory memory = new Memory(cartridge);
-            PPU ppu = new PPU(memory);
+            FrameBuffer frameBuffer = new FrameBuffer(160, 144);
+            PPU ppu = new PPU(memory, frameBuffer);
             CPU cpu = new CPU(ppu, memory);
             cpu.start();
-            GUIEmulator gui = new GUIEmulator();
+            GUIEmulator gui = new GUIEmulator(frameBuffer);
             gui.run();
             cpu.stopCPU();
         } catch (IOException e) {

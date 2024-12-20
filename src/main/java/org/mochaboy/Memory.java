@@ -102,23 +102,9 @@ public class Memory {
 
     private void loadCart(Cartridge cartridge) {
         byte[] cartData = cartridge.getCartData();
-        System.out.println("Loading cartridge...");
-        System.out.println("Cartridge ROM size: " + cartridge.getCartData().length + " bytes");
-        System.out.println("First few bytes of ROM: " +
-                String.format("0x%02X 0x%02X 0x%02X 0x%02X",
-                        cartridge.getCartData()[0],
-                        cartridge.getCartData()[1],
-                        cartridge.getCartData()[2],
-                        cartridge.getCartData()[3]));
 
-        System.arraycopy(cartData, 0x0000, memory, 0x0000, 0xFFFF/2);
+        System.arraycopy(cartData, 0x0000, memory, 0x0000, 0xFFFF / 2);
 
-        System.out.println("First few bytes of memory after loading ROM: " +
-                String.format("0x%02X 0x%02X 0x%02X 0x%02X",
-                        memory[0],
-                        memory[1],
-                        memory[2],
-                        memory[3]));
     }
 
     public int getMemoryLength() {

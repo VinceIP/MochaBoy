@@ -4,6 +4,7 @@ import org.lwjgl.glfw.GLFWErrorCallback;
 import org.lwjgl.glfw.GLFWVidMode;
 import org.lwjgl.opengl.GL;
 import org.lwjgl.system.MemoryStack;
+import org.mochaboy.FrameBuffer;
 
 import java.nio.IntBuffer;
 
@@ -16,9 +17,10 @@ import static org.lwjgl.system.MemoryUtil.NULL;
 public class GUIEmulator {
 
     private long window;
+    private final FrameBuffer frameBuffer;
 
-    public GUIEmulator() {
-
+    public GUIEmulator(FrameBuffer frameBuffer) {
+        this.frameBuffer = frameBuffer;
     }
 
     public void run() {
@@ -80,11 +82,30 @@ public class GUIEmulator {
 
     public void loop() {
         GL.createCapabilities();
-
         glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+
+        int textureId = glGenTextures();
+        glBindTexture(GL_TEXTURE_2D, textureId);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
         while (!glfwWindowShouldClose(window)) {
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); //Clear framebuffer
+
+            int[] pixels = frameBuffer.getPixels();
+
+            glBindTexture(GL_TEXTURE_2D, textureId);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, frameBuffer.getWidth(), frameBuffer.getHeight(),
+                    0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+
+            glBegin(GL_QUADS);
+            glBegin(GL_QUADS);
+            glTexCoord2f(0, 0); glVertex2f(-1, 1);
+            glTexCoord2f(1, 0); glVertex2f(1, 1);
+            glTexCoord2f(1, 1); glVertex2f(1, -1);
+            glTexCoord2f(0, 1); glVertex2f(-1, -1);
+            glEnd();
+
             glfwSwapBuffers(window);
             glfwPollEvents();
         }
