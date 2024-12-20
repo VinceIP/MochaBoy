@@ -2,27 +2,29 @@ package org.mochaboy;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.HashMap;
 import java.util.Map;
 
 public class Memory {
 
     private byte[] memory;
+    private byte[] bootRom;
     private Cartridge cartridge;
     private MemoryMap memoryMap;
+    private boolean bootRomEnabled = true;
 
     public Memory(Cartridge cartridge) {
         this.cartridge = cartridge;
         memoryMap = new MemoryMap();
         memory = new byte[0x10000];
+        bootRom = new byte[0x100];
         init();
     }
 
     public void init() {
         //Put cart ROM into memory
-        //loadCart(cartridge);
-        //Loaded on top of cart
         loadBootRom();
+        loadCart(cartridge);
+        //Loaded on top of cart
     }
 
     /**
@@ -30,7 +32,11 @@ public class Memory {
      * @return Get a single byte from address.
      */
     public int readByte(int address) {
-        return memory[address & 0xFFFF] & 0xFF;
+        address &= 0xFFFF;
+        if (bootRomEnabled && address >= 0x0000 && address <= 0x00FF) {
+            return bootRom[address] & 0xFF;
+        }
+        return memory[address] & 0xFF;
     }
 
     public int readUnsignedByte(int address) {
@@ -46,6 +52,12 @@ public class Memory {
     public void writeByte(int address, int value) {
         value = value & 0xFF;
         address = address & 0xFFFF;
+        if (address == 0xFF50) {
+            bootRomEnabled = false;
+        }
+        if (bootRomEnabled && address >= 0x0000 && address <= 0x00FF) {
+            return;
+        }
         memory[address] = (byte) value;
     }
 
@@ -65,6 +77,7 @@ public class Memory {
      * @return Get a 2-byte value from address.
      */
     public int readWord(int address) {
+        address &= 0xFFFF;
         int lowByte = readByte(address & 0xFFFF);
         int highByte = readByte((address + 1) & 0xFFFF);
         return (highByte << 8) | lowByte;
@@ -77,7 +90,7 @@ public class Memory {
         try (InputStream inputStream = getClass().getResourceAsStream("/dmg_boot.bin")) {
             if (inputStream != null) {
                 byte[] buffer = inputStream.readAllBytes();
-                System.arraycopy(buffer, 0, memory, 0, buffer.length);
+                System.arraycopy(buffer, 0, bootRom, 0, buffer.length);
             } else {
                 System.out.println("Failed to load boot ROM resource as stream.");
             }
@@ -88,7 +101,24 @@ public class Memory {
     }
 
     private void loadCart(Cartridge cartridge) {
-        System.arraycopy(cartridge.getCartData(), 0, memory, 0, cartridge.getCartData().length);
+        byte[] cartData = cartridge.getCartData();
+        System.out.println("Loading cartridge...");
+        System.out.println("Cartridge ROM size: " + cartridge.getCartData().length + " bytes");
+        System.out.println("First few bytes of ROM: " +
+                String.format("0x%02X 0x%02X 0x%02X 0x%02X",
+                        cartridge.getCartData()[0],
+                        cartridge.getCartData()[1],
+                        cartridge.getCartData()[2],
+                        cartridge.getCartData()[3]));
+
+        System.arraycopy(cartData, 0, memory, 0, Math.min(0x4000, cartData.length));
+
+        System.out.println("First few bytes of memory after loading ROM: " +
+                String.format("0x%02X 0x%02X 0x%02X 0x%02X",
+                        memory[0],
+                        memory[1],
+                        memory[2],
+                        memory[3]));
     }
 
     public int getMemoryLength() {

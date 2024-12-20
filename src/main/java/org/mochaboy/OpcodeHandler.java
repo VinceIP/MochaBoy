@@ -17,9 +17,10 @@ public class OpcodeHandler {
         mapMnemonics();
     }
 
-    public void execute(CPU cpu, OpcodeInfo opcodeInfo) {
+    public int execute(CPU cpu, OpcodeInfo opcodeInfo) {
         //do logic on cpu
         mnemonicMap.get(opcodeInfo.getMnemonic()).accept(cpu, opcodeInfo);
+        return opcodeInfo.getCycles()[0];
         //inc PC based on opcode info
         //add to cpu timer based on opcode info
         //consider increasing t states during specific operations (reading and writing) for accuracy instead?
@@ -179,7 +180,8 @@ public class OpcodeHandler {
     private void CALL(CPU cpu, OpcodeInfo opcodeInfo) {
         // Read the address to jump to (16-bit) from PC+1 and PC+2
         int callAddress = cpu.getMemory().readWord(cpu.getRegisters().getPC() + 1);
-        int returnAddress = cpu.getRegisters().getPC() + 3; // Next instruction address
+        cpu.getRegisters().incrementPC();
+        int returnAddress = cpu.getRegisters().getPC() + 2; // Next instruction address
 
         boolean shouldCall = true;
 
@@ -206,8 +208,9 @@ public class OpcodeHandler {
         if (shouldCall) {
             cpu.getStack().push(returnAddress);
             cpu.getRegisters().setPC(callAddress);
+            cpu.setDidJump(true);
         } else {
-            cpu.getRegisters().setPC(cpu.getRegisters().getPC() + 3);
+            //cpu.getRegisters().setPC(cpu.getRegisters().getPC() + 3);
         }
     }
 
@@ -229,11 +232,12 @@ public class OpcodeHandler {
         int yVal;
         switch (yOpr.getName()) {
             case "n8":
-                yVal = cpu.getMemory().readByte(cpu.getRegisters().getPC());
+                yVal = cpu.getMemory().readByte(cpu.getRegisters().getPC() + 1);
                 cpu.getRegisters().incrementPC();
                 break;
             case "HL":
                 yVal = cpu.getMemory().readByte(cpu.getRegisters().getHL());
+                cpu.getRegisters().incrementPC();
                 break;
             default:
                 yVal = cpu.getRegisters().getByName(yOpr.getName());
@@ -283,31 +287,25 @@ public class OpcodeHandler {
 
     private void DEC(CPU cpu, OpcodeInfo opcodeInfo) {
         Operand xOpr = opcodeInfo.getOperands()[0];
-        int value;
+        String registerName = xOpr.getName();
 
-        if (!is8BitRegister(xOpr.getName()) && xOpr.isImmediate()) {
-            value = cpu.getRegisters().getByName(xOpr.getName());
-            int result = (value - 1) & 0xFFFF;
-            cpu.getRegisters().setByName(xOpr.getName(), result);
-            return; // No need to modify flags for 16-bit DEC
-        }
-        if (!xOpr.isImmediate()) {
-            // probably means DEC [HL])
-            value = cpu.getMemory().readByte(cpu.getRegisters().getHL());
-        } else {
-            // Otherwise, it’s a normal 8-bit register
-            value = cpu.getRegisters().getByName(xOpr.getName());
-        }
-
-        int result = (value - 1) & 0xFF; // 8-bit subtraction with wrap-around
-        processFlags(cpu, opcodeInfo, value, 1);
-
-        if (!xOpr.isImmediate()) {
-            // Write back to memory at address [HL]
+        if (registerName.equals("HL")) {
+            // DEC (HL)
+            int value = cpu.getMemory().readByte(cpu.getRegisters().getHL());
+            int result = (value - 1) & 0xFF;
             cpu.getMemory().writeByte(cpu.getRegisters().getHL(), result);
+            processFlags(cpu, opcodeInfo, value, 1);
+        } else if (is8BitRegister(registerName)) {
+            // 8-bit register decrement
+            int value = cpu.getRegisters().getByName(registerName);
+            int result = (value - 1) & 0xFF;
+            cpu.getRegisters().setByName(registerName, result);
+            processFlags(cpu, opcodeInfo, value, 1);
         } else {
-            // Write back to a standard 8-bit register
-            cpu.getRegisters().setByName(xOpr.getName(), result);
+            // 16-bit register decrement (no flags affected)
+            int value = cpu.getRegisters().getByName(registerName);
+            int result = (value - 1) & 0xFFFF;
+            cpu.getRegisters().setByName(registerName, result);
         }
     }
 
@@ -381,7 +379,7 @@ public class OpcodeHandler {
         Operand yOpr;
         boolean shouldJump = false;
         byte e8 = (byte) cpu.getMemory().readByte(cpu.getRegisters().getPC() + 1);
-        cpu.getRegisters().incrementPC(2);
+        cpu.getRegisters().incrementPC(1);
         if (opcodeInfo.getOperands().length > 1) {
             shouldJump = switch (xOpr.getName()) {
                 case "Z" -> cpu.getRegisters().isFlagSet(Registers.FLAG_ZERO);
@@ -393,7 +391,7 @@ public class OpcodeHandler {
         } else shouldJump = true;
 
         if (shouldJump) {
-            cpu.getRegisters().setPC((cpu.getRegisters().getPC() + e8) & 0xFFFF);
+            cpu.getRegisters().setPC(((cpu.getRegisters().getPC() + e8) + 1) & 0xFFFF);
             cpu.setDidJump(true);
         }
 
@@ -410,7 +408,7 @@ public class OpcodeHandler {
         switch (sourceOpr.getName()) {
             //Given 8-bit value
             case "n8":
-                value = cpu.getMemory().readByte(cpu.getRegisters().getPC());
+                value = cpu.getMemory().readByte(cpu.getRegisters().getPC()+1);
                 cpu.getRegisters().incrementPC();
                 break;
             //[n16] or n16
@@ -422,7 +420,7 @@ public class OpcodeHandler {
                 break;
             case "a16":
                 // Load from absolute 16-bit address
-                int address = cpu.getMemory().readWord(cpu.getRegisters().getPC());
+                int address = cpu.getMemory().readWord(cpu.getRegisters().getPC() + 1);
                 value = cpu.getMemory().readByte(address);
                 cpu.getRegisters().incrementPC(2);
                 break;
@@ -437,6 +435,7 @@ public class OpcodeHandler {
                 //LD HL, SP+e8
                 if (opcodeInfo.getOperands().length > 2) {
                     byte e8 = (byte) cpu.getMemory().readByte(basePC + 1);
+                    cpu.getRegisters().incrementPC();
                     int sp = cpu.getRegisters().getSP();
                     value = (sp + e8) & 0xFFFF;
                     processFlags(cpu, opcodeInfo, sp, e8); //Flags are set only here
@@ -594,8 +593,11 @@ public class OpcodeHandler {
                     break;
             }
         }
-        if (shouldRet) cpu.getRegisters().setPC(returnAddr);
-        else cpu.getRegisters().incrementPC();
+        if (shouldRet) {
+            cpu.getRegisters().setPC(returnAddr);
+            cpu.setDidJump(true);
+        }
+        //else cpu.getRegisters().incrementPC();
     }
 
     private void RETI(CPU cpu, OpcodeInfo opcodeInfo) {

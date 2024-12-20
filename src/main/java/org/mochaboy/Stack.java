@@ -1,28 +1,58 @@
 package org.mochaboy;
 
+import java.util.LinkedList;
+
 public class Stack {
     private CPU cpu;
+    private LinkedList<Integer> debugStack;
 
     public Stack(CPU cpu) {
         this.cpu = cpu;
+        debugStack = new LinkedList<>();
     }
 
     public void push(int value) {
-        int sp = (cpu.getRegisters().getSP() - 2) & 0xFFFF;
+        int sp = cpu.getRegisters().getSP();
+        sp = (sp - 1) & 0xFFFF;
+        cpu.getMemory().writeByte(sp, (value >> 8) & 0xFF);
+        debugStack.push((value >> 8) & 0xFF);
+
+        sp = (sp - 1) & 0xFFFF;
+        cpu.getMemory().writeByte(sp, value & 0xFF);
+        debugStack.push(value & 0xFF);
+
         cpu.getRegisters().setSP(sp);
-        cpu.getMemory().writeWord(sp, value & 0xFFFF);
     }
 
     public int pop() {
         int sp = cpu.getRegisters().getSP();
-        int value = cpu.getMemory().readWord(sp);
-        sp = (sp + 2) & 0xFFFF;
+
+        int lowByte = cpu.getMemory().readByte(sp);
+        int poppedLow = debugStack.pop();
+        if (poppedLow != (lowByte & 0xFF)) System.out.println("STACK ERROR: Popped low byte does not match.");
+
+        sp = (sp + 1) & 0xFFFF;
+
+        int highByte = cpu.getMemory().readByte(sp);
+        int poppedHigh = debugStack.pop();
+        if (poppedHigh != (highByte & 0xFF)) System.out.println("STACK ERROR: Popped high byte does not match.");
+
+        sp = (sp + 1) & 0xFFFF;
         cpu.getRegisters().setSP(sp);
-        return value & 0xFFFF;
+
+        return ((highByte << 8) | lowByte) & 0xFFFF;
     }
 
     public int peek() {
         int sp = cpu.getRegisters().getSP();
         return cpu.getMemory().readWord(sp);
+    }
+
+    public String getDebugStackContents() {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < debugStack.size(); i++) {
+            sb.append(i).append(": 0x").append(String.format("%02X", debugStack.get(i))).append(" ");
+        }
+        return sb.toString();
     }
 }

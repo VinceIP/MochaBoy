@@ -19,7 +19,8 @@ public class MochaBoy {
         try {
             Cartridge cartridge = new Cartridge(path);
             Memory memory = new Memory(cartridge);
-            CPU cpu = new CPU(memory);
+            PPU ppu = new PPU(memory);
+            CPU cpu = new CPU(ppu, memory);
             cpu.start();
             GUIEmulator gui = new GUIEmulator();
             gui.run();

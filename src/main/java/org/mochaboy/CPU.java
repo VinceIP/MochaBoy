@@ -3,7 +3,7 @@ package org.mochaboy;
 import java.io.IOException;
 
 public class CPU extends Thread {
-
+    private PPU ppu;
     private Memory memory;
     private Registers registers;
     private Stack stack;
@@ -17,8 +17,12 @@ public class CPU extends Thread {
     private boolean stopMode;
     private boolean didJump;
     private boolean running;
+    private int totalCycles;
+    private static final int CYCLES_PER_FRAME = 70224;
+    private static final double FRAME_TIME_MS = 1000.0 / 59.7275;
 
-    public CPU(Memory memory) throws IOException {
+    public CPU(PPU ppu, Memory memory) throws IOException {
+        this.ppu = ppu;
         this.memory = memory;
         this.registers = new Registers();
         stack = new Stack(this);
@@ -30,25 +34,58 @@ public class CPU extends Thread {
     @Override
     public void run() {
         running = true;
+        long frameStartTime = System.nanoTime();
         while (running) {
-            System.out.printf("0x%04X\n", getRegisters().getPC());
             OpcodeInfo opcode = fetch();
-            execute(opcode);
+            int pc = registers.getPC();
+            //System.out.printf("PC: 0x%04X\n", pc);
+
+            // In your CPU, when executing LD (HL) in the logo check loop:
+//            if (pc == 0x00E8) {
+//                System.out.println("Logo Check: Comparing cart data: 0x" + String.format("%02X", memory.readByte(registers.getHL())) +
+//                        " with boot ROM data: 0x" + String.format("%02X", memory.readByte(registers.getDE())));
+//            }
+
+// In your CPU, when executing ADD (HL) in the checksum check loop:
+//            if (pc == 0x00F4 || pc == 0x00F9) {
+//                System.out.println("Checksum Check: Adding value from address 0x" + String.format("%04X", registers.getHL()) +
+//                        ": 0x" + String.format("%02X", memory.readByte(registers.getHL())));
+//            }
+
+//            if (pc == 0x00F9) {
+//                System.out.println("Checksum Result (Lower Byte): 0x" + String.format("%02X", registers.getA()));
+//            }
+
+            int cycles = execute(opcode);
+
+
             if (!didJump) {
-                getRegisters().incrementPC();
+                //getRegisters().incrementPC();
+                registers.setPC(pc + opcode.getBytes());
             } else didJump = false;
             //handle pending IME switch
             //handle HALT
-            try {
-                Thread.sleep(1);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+            ppu.step(cycles);
+            totalCycles += cycles;
+            if (totalCycles >= CYCLES_PER_FRAME) {
+                long frameEndTime = System.nanoTime();
+                double frameTimeMs = (frameEndTime - frameStartTime) / 1_000_000.0;
+                double sleepTime = FRAME_TIME_MS - frameTimeMs;
+                if (sleepTime > 0) {
+                    try {
+                        Thread.sleep((long) sleepTime);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+                totalCycles -= CYCLES_PER_FRAME;
+                frameStartTime = System.nanoTime();
             }
         }
 
     }
 
-    public void stopCPU(){
+    public void stopCPU() {
         running = false;
     }
 
@@ -69,8 +106,8 @@ public class CPU extends Thread {
         return opcodeInfo;
     }
 
-    public void execute(OpcodeInfo opcodeInfo) {
-        opcodeHandler.execute(this, opcodeInfo);
+    public int execute(OpcodeInfo opcodeInfo) {
+        return opcodeHandler.execute(this, opcodeInfo);
     }
 
     public Memory getMemory() {

@@ -59,8 +59,9 @@ public class FlagCalculator {
             FlagConditions conditions = new FlagConditions();
             //Flags only affected under these conditions
             if (OpcodeHandler.is8BitRegister(operands[0].getName()) || operands[0].getName().equals("HL")) {
-                conditions.isZero = ((xVal - yVal) & 0xFF) == 0;
-                conditions.isHalfCarry = ((xVal & 0xF0) < (yVal & 0xF0)) || ((xVal & 0xF) < (yVal & 0xF));
+                conditions.isZero = ((xVal - 1) & 0xFF) == 0; // Much simpler and accurate
+                conditions.isHalfCarry = (xVal & 0xF) < 1;  // Correct half-carry logic
+                conditions.isSubtract = true; // Forgot to set this flag
             }
             return conditions;
         });
