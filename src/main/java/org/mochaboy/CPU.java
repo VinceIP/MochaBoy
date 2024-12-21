@@ -42,10 +42,9 @@ public class CPU extends Thread {
             int pc = registers.getPC();
             //System.out.printf("PC: 0x%04X\n", pc);
 
-            if (pc == 0x00fe) {
-                ppu.printVRAM();
+            if (pc >= 0x100) {
+                printDebugLog(opcode);
             }
-
             int cycles = execute(opcode);
             elapsedEmulatedTimeNs += (long) (cycles * 238.4);
 
@@ -77,6 +76,44 @@ public class CPU extends Thread {
 
     public void stopCPU() {
         running = false;
+    }
+
+    private void printDebugLog(OpcodeInfo opcode) {
+        int pc = getRegisters().getPC();
+        int rawOpcode = memory.readByte(pc) & 0xFF;
+        Operand[] ops = opcode.getOperands();
+        StringBuilder sb = new StringBuilder();
+        // We'll track where to read immediate values from
+        int immOffset = 1; // start from pc+1
+
+        for (int i = 0; i < ops.length; i++) {
+            String name = ops[i].getName();
+            switch (name) {
+                case "n8", "d8", "a8", "e8": {
+                    int val = memory.readByte(pc + immOffset) & 0xFF;
+                    sb.append(String.format("0x%02X", val));
+                    immOffset++;
+                    break;
+                }
+                case "n16", "d16", "a16": {
+                    int low = memory.readByte(pc + immOffset) & 0xFF;
+                    int high = memory.readByte(pc + immOffset + 1) & 0xFF;
+                    int val = (high << 8) | low;
+                    sb.append(String.format("0x%04X", val));
+                    immOffset += 2;
+                    break;
+                }
+                default:
+                    sb.append(name);
+                    break;
+            }
+            if (i < ops.length - 1) {
+                sb.append(", ");
+            }
+        }
+
+        System.out.printf("PC=%04X OPCODE=%02X (%s) %s\n",
+                pc, rawOpcode, opcode.getMnemonic(), sb.toString());
     }
 
 

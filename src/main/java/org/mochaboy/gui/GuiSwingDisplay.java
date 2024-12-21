@@ -10,7 +10,7 @@ public class GuiSwingDisplay extends JPanel {
     private final FrameBuffer frameBuffer;
     private final int width = 160;
     private final int height = 144;
-    private final int scale = 2;
+    private final int scale = 4;
     private BufferedImage image;
     private int[] frame;
     private boolean enabled;

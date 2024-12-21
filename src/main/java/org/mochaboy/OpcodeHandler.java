@@ -411,10 +411,6 @@ public class OpcodeHandler {
         int basePC = cpu.getRegisters().getPC();
         incDec incDecState = incDec.NULL;
 
-        if (destOpr.getName().equals("HL") && sourceOpr.getName().equals("A") && destOpr.isDecrement()) {
-            System.out.println("");
-        }
-
         // Get value to be copied from Y operand
         switch (sourceOpr.getName()) {
             // Given 8-bit value
@@ -576,7 +572,12 @@ public class OpcodeHandler {
         int poppedVal = cpu.getStack().pop();
         //Flags only affected with AF
         if (xOpr.getName().equals("AF")) {
+            int A = (poppedVal >> 8) & 0xFF;
+            int F = poppedVal & 0xF0; // mask out the lower nibble
+            cpu.getRegisters().setA(A);
+            cpu.getRegisters().setF(F);
             processFlags(cpu, opcodeInfo, poppedVal, 0);
+            return;
         }
         applyResult(cpu, xOpr.getName(), poppedVal);
     }
@@ -606,7 +607,7 @@ public class OpcodeHandler {
     }
 
     private void RET(CPU cpu, OpcodeInfo opcodeInfo) {
-        int returnAddr = cpu.getStack().pop();
+        int returnAddr;
         boolean shouldRet = true;
         if (opcodeInfo != null && opcodeInfo.getOperands().length > 0) {
             Operand xOpr = opcodeInfo.getOperands()[0];
@@ -627,6 +628,7 @@ public class OpcodeHandler {
             }
         }
         if (shouldRet) {
+            returnAddr = cpu.getStack().pop();
             cpu.getRegisters().setPC(returnAddr);
             cpu.setDidJump(true);
         }

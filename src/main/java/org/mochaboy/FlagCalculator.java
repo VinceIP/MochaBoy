@@ -242,9 +242,18 @@ public class FlagCalculator {
 
         calculators.put("LD", (cpu, xVal, yVal, operands) -> {
             FlagConditions conditions = new FlagConditions();
-            conditions.isHalfCarry = (((xVal & 0x0FFF) + (yVal & 0x0FFF)) & 0x1000) != 0;
-            conditions.isCarry = ((xVal & 0xFFFF) + (yVal & 0xFFFF)) > 0xFFFF;
-            return conditions;
+            if (operands.length > 2) {
+                int sp = xVal & 0xFFFF;
+                int offset = (byte) yVal; // sign-extend e8
+                int sum = (sp + offset) & 0xFFFF;
+                conditions.isHalfCarry = ((sp ^ offset ^ sum) & 0x10) != 0;
+                conditions.isCarry = ((sp ^ offset ^ sum) & 0x100) != 0;
+                return conditions;
+            } else {
+                conditions.isHalfCarry = (((xVal & 0x0FFF) + (yVal & 0x0FFF)) & 0x1000) != 0;
+                conditions.isCarry = ((xVal & 0xFFFF) + (yVal & 0xFFFF)) > 0xFFFF;
+                return conditions;
+            }
         });
     }
 
