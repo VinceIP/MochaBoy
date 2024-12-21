@@ -1,6 +1,6 @@
 package org.mochaboy;
 
-import org.mochaboy.gui.GUIEmulator;
+import org.mochaboy.gui.GuiSwingEmulator;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -20,12 +20,12 @@ public class MochaBoy {
             Cartridge cartridge = new Cartridge(path);
             Memory memory = new Memory(cartridge);
             FrameBuffer frameBuffer = new FrameBuffer(160, 144);
-            PPU ppu = new PPU(memory, frameBuffer);
+            GuiSwingEmulator gui = new GuiSwingEmulator(frameBuffer);
+            PPU ppu = new PPU(memory, frameBuffer, gui.getDisplay());
             CPU cpu = new CPU(ppu, memory);
             cpu.start();
-            GUIEmulator gui = new GUIEmulator(frameBuffer);
             gui.run();
-            cpu.stopCPU();
+            //cpu.stopCPU();
         } catch (IOException e) {
             System.out.println("IOException reading cart.");
         }

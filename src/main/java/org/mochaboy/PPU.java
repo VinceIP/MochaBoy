@@ -1,5 +1,8 @@
 package org.mochaboy;
 
+import org.mochaboy.gui.GuiSwingDisplay;
+
+import javax.swing.*;
 import java.util.Map;
 
 public class PPU {
@@ -7,14 +10,16 @@ public class PPU {
     private int cycleCounter;
     private boolean lcdEnabled;
     private final Map<String, Integer> memoryMap;
-    private final FrameBuffer frameBuffer;
     private static final int SCANLINE_CYCLES = 456; //cycles per scanline
 
-    private Memory memory;
+    private final Memory memory;
+    private final FrameBuffer frameBuffer;
+    private final GuiSwingDisplay display;
 
-    public PPU(Memory memory, FrameBuffer frameBuffer) {
+    public PPU(Memory memory, FrameBuffer frameBuffer, GuiSwingDisplay display) {
         this.memory = memory;
         this.frameBuffer = frameBuffer;
+        this.display = display;
         this.cycleCounter = 0;
         memoryMap = memory.getMemoryMap();
         init();
@@ -37,6 +42,7 @@ public class PPU {
         memory.writeByte(map.get("BGP"), 0xFC); //bg palette
         memory.writeByte(map.get("OBP0"), 0xFF); //Sprite palette 0
         memory.writeByte(map.get("OBP1"), 0xFF); //Sprite palette 1
+        //loadTestTiles();
     }
 
     public void step(int cycles) {
@@ -56,6 +62,7 @@ public class PPU {
             if (ppuMode != PPU_MODE.VBLANK) {
                 setPpuMode(PPU_MODE.VBLANK);
                 triggerVBlankInterrupt(); // Only trigger once when entering V-Blank
+                SwingUtilities.invokeLater(display::updateFrame);
             }
         } else if (cycleCounter < 80) {
             // Enter OAM Scan Mode
@@ -117,9 +124,12 @@ public class PPU {
             int tileData1 = memory.readByte(tileDataAddress + (tileY * 2));
             int tileData2 = memory.readByte(tileDataAddress + (tileY * 2) + 1);
 
-//            System.out.println(String.format("Tile data address: %02X", tileAddress));
-//            System.out.println("Tile data 1: " + tileData1);
-//            System.out.println("Tile data 2: " + tileData1);
+            if (tileData1 != 0 && tileData2 != 0) {
+                System.out.println(String.format("Tile data base: %04X", tileDataBase));
+                System.out.println(String.format("Tile data address: %02X", tileAddress));
+                System.out.println("Tile data 1: " + tileData1);
+                System.out.println("Tile data 2: " + tileData2);
+            }
 
 
             int tileX = (scx + pixel) % 8;
@@ -141,6 +151,27 @@ public class PPU {
 
     }
 
+    private void loadTestTiles() {
+        // Example checkerboard pattern (8x8 tile)
+        int[] checkerboardTile = {
+                0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00,
+                0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF,
+                0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00,
+                0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF,
+                0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00,
+                0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF,
+                0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00,
+                0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF
+        };
+
+        int tileAddress = 0x8000;
+        for (int i = 0; i < checkerboardTile.length; i++) {
+            memory.writeByte(tileAddress + i, checkerboardTile[i]);
+        }
+        memory.writeByte(0x9800, 0);
+    }
+
+
     private int getColor(int colorIndex) {
         switch (colorIndex) {
             case 0:
@@ -160,6 +191,7 @@ public class PPU {
         //Set IF to reflect vblank bit
         int IF = memory.readByte(0xFF0F);
         memory.writeByte(0xFF0F, IF | 0x01);
+        display.setFrameReady(true);
     }
 
     public int incrementLY() {

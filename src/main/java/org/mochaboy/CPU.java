@@ -41,37 +41,12 @@ public class CPU extends Thread {
             int pc = registers.getPC();
             //System.out.printf("PC: 0x%04X\n", pc);
 
-
-//            if(pc == 0x00fa){
+//            if (pc == 0x0048) {
 //                ppu.printVRAM();
+//                System.out.println(String.format("9910: %04X", memory.readByte(0x9910)));
 //            }
 
-            // --- DEBUG INTERCEPTS START ---
-            String mnemonic = opcode.getMnemonic();
-            int opcodeByte = opcode.getOpcode();
-
-// In your CPU, when executing LD A,(DE) at 0x0027
-//            if (pc == 0x0027) {
-//                System.out.println("Logo Data Load: Loading byte into A from (DE): 0x" + String.format("%02X", memory.readByte(registers.getDE())));
-//            }
-
-// In your CPU, when executing LD C,A at 0x0095
-//            if (pc == 0x0095) {
-//                System.out.println("Graphics Routine: Loading byte into C from A: 0x" + String.format("%02X", registers.getA()));
-
-//            if(pc == 0x00e0){
-//                ppu.printVRAM();
-//            }
-            // In your CPU, during the tile map setup loop (0x0048 - 0x0053):
-            if (pc >= 0x0048 && pc <= 0x0053) {
-                if (opcode.getMnemonic().equals("LD") && opcodeByte == 0x32) { // Check for LD (HL-),A
-                    System.out.println("Tile Map Setup: Address = 0x" + String.format("%04X", registers.getHL()) +
-                            ", Value = 0x" + String.format("%02X", registers.getA()));
-                }
-            }
             int cycles = execute(opcode);
-
-
 
             if (!didJump) {
                 //getRegisters().incrementPC();
@@ -109,8 +84,8 @@ public class CPU extends Thread {
         OpcodeInfo opcodeInfo;
         String hexString;
         if (opcode == 0xCB) {
-            getRegisters().incrementPC();
-            opcode = memory.readByte(registers.getPC()) & 0xFF;
+            //getRegisters().incrementPC();
+            opcode = memory.readByte(registers.getPC() + 1) & 0xFF;
             hexString = String.format("0x%02X", opcode);
             opcodeInfo = opcodeWrapper.getCbprefixed().get(hexString);
         } else {
@@ -121,7 +96,9 @@ public class CPU extends Thread {
     }
 
     public int execute(OpcodeInfo opcodeInfo) {
-        return opcodeHandler.execute(this, opcodeInfo);
+        if (opcodeInfo == null) return 0;
+        else
+            return opcodeHandler.execute(this, opcodeInfo);
     }
 
     public Memory getMemory() {

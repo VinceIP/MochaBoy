@@ -19,7 +19,9 @@ public class OpcodeHandler {
 
     public int execute(CPU cpu, OpcodeInfo opcodeInfo) {
         //do logic on cpu
-        mnemonicMap.get(opcodeInfo.getMnemonic()).accept(cpu, opcodeInfo);
+        if (opcodeInfo == null) return 0;
+        else
+            mnemonicMap.get(opcodeInfo.getMnemonic()).accept(cpu, opcodeInfo);
         return opcodeInfo.getCycles()[0];
         //inc PC based on opcode info
         //add to cpu timer based on opcode info
@@ -358,9 +360,9 @@ public class OpcodeHandler {
     }
 
     private void JP(CPU cpu, OpcodeInfo opcodeInfo) {
-        int address = cpu.getMemory().readWord(cpu.getRegisters().getPC());
+        int address = cpu.getMemory().readWord(cpu.getRegisters().getPC() + 1);
         cpu.getRegisters().incrementPC(2);
-        boolean shouldJump = false;
+        boolean shouldJump = true;
         if (opcodeInfo.getOperands().length > 1) {
             Operand xOpr = opcodeInfo.getOperands()[0];
             String condition = xOpr.getName(); // "Z", "NZ", "C", "NC"
@@ -466,7 +468,7 @@ public class OpcodeHandler {
             case "n16":
             case "a16":
                 // Is always an address
-                int targetAddress = cpu.getMemory().readWord(basePC); // Read the value before PC was inc above
+                int targetAddress = cpu.getMemory().readWord(basePC + 1); // Read the value before PC was inc above
                 cpu.getMemory().writeWord(targetAddress, value);
                 break;
             // [r16]
@@ -510,6 +512,17 @@ public class OpcodeHandler {
                     cpu.getRegisters().setByName("HL", (cpu.getRegisters().getHL() + 1) & 0xFFFF);
                     break;
             }
+        }
+    }
+
+    private void LD(CPU cpu, OpcodeInfo opcodeInfo, int temp) {
+        Memory memory = cpu.getMemory();
+        Operand left = opcodeInfo.getOperands()[0];
+        Operand right = opcodeInfo.getOperands()[1];
+        int destinationAddress;
+        int source;
+        if (left.getName().equals("n16")) {
+            //destinationAddress = memory.readByte()
         }
     }
 
