@@ -23,6 +23,7 @@ public class MochaBoy {
             GuiSwingEmulator gui = new GuiSwingEmulator(frameBuffer);
             PPU ppu = new PPU(memory, frameBuffer, gui.getDisplay());
             CPU cpu = new CPU(ppu, memory);
+            ppu.setCPU(cpu);
             cpu.start();
             gui.run();
             //cpu.stopCPU();

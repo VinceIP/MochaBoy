@@ -411,6 +411,10 @@ public class OpcodeHandler {
         int basePC = cpu.getRegisters().getPC();
         incDec incDecState = incDec.NULL;
 
+        if (destOpr.getName().equals("HL") && sourceOpr.getName().equals("A") && destOpr.isDecrement()) {
+            System.out.println("");
+        }
+
         // Get value to be copied from Y operand
         switch (sourceOpr.getName()) {
             // Given 8-bit value
@@ -481,7 +485,7 @@ public class OpcodeHandler {
                 else if (destOpr.isDecrement())
                     incDecState = incDec.DEC_LEFT;
                 if (!destOpr.isImmediate()) {
-                    cpu.getMemory().writeWord(cpu.getRegisters().getByName(destOpr.getName()), value);
+                        cpu.getMemory().writeByte(cpu.getRegisters().getByName(destOpr.getName()), value);
                 } else
                     cpu.getRegisters().setByName(destOpr.getName(), (value &
                             (is8BitRegister(destOpr.getName()) ? 0xFF : 0xFFFF)));

@@ -16,6 +16,8 @@ public class PPU {
     private final FrameBuffer frameBuffer;
     private final GuiSwingDisplay display;
 
+    private CPU cpu;
+
     public PPU(Memory memory, FrameBuffer frameBuffer, GuiSwingDisplay display) {
         this.memory = memory;
         this.frameBuffer = frameBuffer;
@@ -124,23 +126,31 @@ public class PPU {
             int tileData1 = memory.readByte(tileDataAddress + (tileY * 2));
             int tileData2 = memory.readByte(tileDataAddress + (tileY * 2) + 1);
 
-            if (tileData1 != 0 && tileData2 != 0) {
-                System.out.println(String.format("Tile data base: %04X", tileDataBase));
-                System.out.println(String.format("Tile data address: %02X", tileAddress));
-                System.out.println("Tile data 1: " + tileData1);
-                System.out.println("Tile data 2: " + tileData2);
-            }
+//            if (tileData1 != 0 && tileData2 != 0) {
+//                System.out.println(String.format("Tile data base: %04X", tileDataBase));
+//                System.out.println(String.format("Tile data address: %02X", tileAddress));
+//                System.out.println("Tile data 1: " + tileData1);
+//                System.out.println("Tile data 2: " + tileData2);
+//            }
 
 
             int tileX = (scx + pixel) % 8;
 
+//            if (cpu.getElapsedEmulatedTimeNs() >= 2_000_000_000L) {
+//                System.out.println(String.format("lcdc: %02X, scx: %02X, scy: %02X, ly: %02X", lcdc, scx, scy, ly));
+//                System.out.println(String.format("tileMapBase: %04X, tileDataBase: %04X", tileMapBase, tileDataBase));
+//                System.out.println(String.format("tileRow: %02X, pixel: %02X, tileCol: %02X", tileRow, pixel, tileCol));
+//                System.out.println(String.format("tileAddress: %04X, tileNum: %02X", tileAddress, tileNum));
+//                System.out.println(String.format("tileDataAddress: %04X", tileDataAddress));
+//                System.out.println(String.format("tileY: %02X, tileX: %02X", tileY, tileX));
+//                System.out.println(String.format("tileData1: %02X, tileData2: %02X", tileData1, tileData2));
+//            }
             int colorBitLow = (tileData1 >> 7 - tileX) & 1;
             int colorBitHigh = (tileData2 >> (7 - tileX)) & 1;
 
             int colorIndex = (colorBitHigh << 1) | colorBitLow;
 
-            int palette = memory.readByte(bgp);
-            int color = (palette >> (colorIndex * 2)) & 0x03;
+            int color = (bgp >> (colorIndex * 2)) & 0x03;
 
             int actualColor = getColor(color);
 
@@ -255,5 +265,9 @@ public class PPU {
         if (!lcdEnabled) {
             memory.writeByte(map.get("STAT"), (STAT & 0xFC));
         }
+    }
+
+    public void setCPU(CPU cpu) {
+        this.cpu = cpu;
     }
 }

@@ -21,6 +21,7 @@ public class CPU extends Thread {
     private static final int CYCLES_PER_FRAME = 70224;
     private static final double FRAME_TIME_MS = 1000.0 / 59.7275;
     private boolean runOnce = false;
+    private long elapsedEmulatedTimeNs;
 
     public CPU(PPU ppu, Memory memory) throws IOException {
         this.ppu = ppu;
@@ -41,12 +42,12 @@ public class CPU extends Thread {
             int pc = registers.getPC();
             //System.out.printf("PC: 0x%04X\n", pc);
 
-//            if (pc == 0x0048) {
-//                ppu.printVRAM();
-//                System.out.println(String.format("9910: %04X", memory.readByte(0x9910)));
-//            }
+            if (pc == 0x00fe) {
+                ppu.printVRAM();
+            }
 
             int cycles = execute(opcode);
+            elapsedEmulatedTimeNs += (long) (cycles * 238.4);
 
             if (!didJump) {
                 //getRegisters().incrementPC();
@@ -164,5 +165,9 @@ public class CPU extends Thread {
 
     public void setDidJump(boolean didJump) {
         this.didJump = didJump;
+    }
+
+    public long getElapsedEmulatedTimeNs() {
+        return elapsedEmulatedTimeNs;
     }
 }

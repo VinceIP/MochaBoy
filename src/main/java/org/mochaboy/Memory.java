@@ -33,7 +33,7 @@ public class Memory {
      */
     public int readByte(int address) {
         address &= 0xFFFF;
-        if (bootRomEnabled && address >= 0x0000 && address <= 0x00FF) {
+        if (bootRomEnabled && address <= 0x00FF) {
             return bootRom[address] & 0xFF;
         }
         return memory[address] & 0xFF;
@@ -52,17 +52,18 @@ public class Memory {
     public void writeByte(int address, int value) {
         value = value & 0xFF;
         address = address & 0xFFFF;
-        if (address >= 0x98E0 && address < 0x9940 && value >= 0x01) {
-            System.out.println(String.format("Writing %02X at %02X", value, address));
+        if (address >= 0x98E0 && address < 0x9940) {
+            //System.out.println(String.format("Writing %02X at %02X", value, address));
 
         }
         if (address == 0xFF50) {
             bootRomEnabled = false;
+            //System.out.println("Boot rom disabled.");
         }
         if (bootRomEnabled && address <= 0x00FF) {
             return;
         }
-        memory[address] = (byte) value;
+        memory[address] = (byte) (value & 0xFF);
     }
 
     public void writeWord(int address, int value) {
