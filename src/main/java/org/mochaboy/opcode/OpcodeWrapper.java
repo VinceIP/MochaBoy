@@ -1,4 +1,4 @@
-package org.mochaboy;
+package org.mochaboy.opcode;
 
 import java.util.Map;
 

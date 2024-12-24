@@ -2,6 +2,11 @@ package org.mochaboy;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mochaboy.opcode.OpcodeHandler;
+import org.mochaboy.opcode.OpcodeInfo;
+import org.mochaboy.opcode.OpcodeLoader;
+import org.mochaboy.opcode.OpcodeWrapper;
+import org.mochaboy.registers.Registers;
 
 import java.io.File;
 import java.io.IOException;

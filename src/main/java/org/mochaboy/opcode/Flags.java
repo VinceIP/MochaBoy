@@ -1,4 +1,7 @@
-package org.mochaboy;
+package org.mochaboy.opcode;
+
+import org.mochaboy.CPU;
+import org.mochaboy.registers.Registers;
 
 public class Flags {
     private String Z;

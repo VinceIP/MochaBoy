@@ -1,12 +1,19 @@
 package org.mochaboy;
 
+import org.mochaboy.opcode.*;
+import org.mochaboy.registers.Interrupt;
+import org.mochaboy.registers.Registers;
+import org.mochaboy.registers.Timer;
+
 import java.io.IOException;
 
 public class CPU extends Thread {
     private PPU ppu;
     private Memory memory;
     private Registers registers;
+    private Timer timer;
     private Stack stack;
+    private Interrupt interrupt;
     private OpcodeLoader opcodeLoader;
     private OpcodeWrapper opcodeWrapper;
     private OpcodeHandler opcodeHandler;
@@ -26,8 +33,10 @@ public class CPU extends Thread {
     public CPU(PPU ppu, Memory memory) throws IOException {
         this.ppu = ppu;
         this.memory = memory;
-        this.registers = new Registers();
+        registers = new Registers();
+        timer = new Timer(this.memory);
         stack = new Stack(this);
+        interrupt = new Interrupt(this.memory);
         opcodeLoader = new OpcodeLoader();
         opcodeWrapper = opcodeLoader.getOpcodeWrapper();
         opcodeHandler = new OpcodeHandler(opcodeWrapper);
@@ -36,26 +45,31 @@ public class CPU extends Thread {
     @Override
     public void run() {
         running = true;
+        long lastDivUpdateCheck = 0;
         long frameStartTime = System.nanoTime();
+        int tacFreq = timer.getTacFreq();
+        int lastTacUpdateCheck = 0;
         while (running) {
             OpcodeInfo opcode = fetch();
             int pc = registers.getPC();
             //System.out.printf("PC: 0x%04X\n", pc);
 
-            if (pc >= 0x100) {
-                printDebugLog(opcode);
-            }
+//            if (pc >= 0x100) {
+//                printDebugLog(opcode);
+//            }
             int cycles = execute(opcode);
             elapsedEmulatedTimeNs += (long) (cycles * 238.4);
 
-            if (!didJump) {
-                //getRegisters().incrementPC();
-                registers.setPC(pc + opcode.getBytes());
-            } else didJump = false;
+            if (!didJump) registers.setPC(pc + opcode.getBytes());
+            else didJump = false;
             //handle pending IME switch
             //handle HALT
             ppu.step(cycles);
             totalCycles += cycles;
+            if (elapsedEmulatedTimeNs - lastDivUpdateCheck >= Timer.DIV_INC_TIME_NS) {
+                timer.incDiv();
+                lastDivUpdateCheck = elapsedEmulatedTimeNs;
+            }
             if (totalCycles >= CYCLES_PER_FRAME) {
                 long frameEndTime = System.nanoTime();
                 double frameTimeMs = (frameEndTime - frameStartTime) / 1_000_000.0;
@@ -145,6 +159,10 @@ public class CPU extends Thread {
 
     public Registers getRegisters() {
         return registers;
+    }
+
+    public Interrupt getInterrupt() {
+        return interrupt;
     }
 
     public long getTStateCounter() {

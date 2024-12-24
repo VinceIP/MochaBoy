@@ -1,4 +1,4 @@
-package org.mochaboy;
+package org.mochaboy.registers;
 
 import java.util.HashMap;
 import java.util.Map;

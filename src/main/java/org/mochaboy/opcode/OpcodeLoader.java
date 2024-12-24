@@ -1,4 +1,4 @@
-package org.mochaboy;
+package org.mochaboy.opcode;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;

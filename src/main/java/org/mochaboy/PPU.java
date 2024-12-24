@@ -1,6 +1,7 @@
 package org.mochaboy;
 
 import org.mochaboy.gui.GuiSwingDisplay;
+import org.mochaboy.registers.Interrupt;
 
 import javax.swing.*;
 import java.util.Map;
@@ -199,8 +200,7 @@ public class PPU {
 
     private void triggerVBlankInterrupt() {
         //Set IF to reflect vblank bit
-        int IF = memory.readByte(0xFF0F);
-        memory.writeByte(0xFF0F, IF | 0x01);
+        cpu.getInterrupt().setInterrupt(Interrupt.INTERRUPT.VBLANK);
         display.setFrameReady(true);
     }
 

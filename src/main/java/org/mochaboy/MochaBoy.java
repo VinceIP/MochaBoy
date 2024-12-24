@@ -1,5 +1,6 @@
 package org.mochaboy;
 
+import org.mochaboy.gui.GuiGlEmulator;
 import org.mochaboy.gui.GuiSwingEmulator;
 
 import java.io.IOException;
@@ -21,6 +22,7 @@ public class MochaBoy {
             Memory memory = new Memory(cartridge);
             FrameBuffer frameBuffer = new FrameBuffer(160, 144);
             GuiSwingEmulator gui = new GuiSwingEmulator(frameBuffer);
+            //GuiGlEmulator gui = new GuiGlEmulator(frameBuffer);
             PPU ppu = new PPU(memory, frameBuffer, gui.getDisplay());
             CPU cpu = new CPU(ppu, memory);
             ppu.setCPU(cpu);
