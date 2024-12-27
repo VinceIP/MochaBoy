@@ -25,7 +25,11 @@ public class OpcodeHandler {
         //do logic on cpu
         if (opcodeInfo == null) return 0;
         else
-            mnemonicMap.get(opcodeInfo.getMnemonic()).accept(cpu, opcodeInfo);
+            try {
+                mnemonicMap.get(opcodeInfo.getMnemonic()).accept(cpu, opcodeInfo);
+            } catch (NullPointerException e) {
+                System.out.printf("\n%04X: Null ptr exception when executing opcode: %S", cpu.getRegisters().getPC(), opcodeInfo);
+            }
         return opcodeInfo.getCycles()[0];
         //inc PC based on opcode info
         //add to cpu timer based on opcode info
@@ -365,7 +369,7 @@ public class OpcodeHandler {
 
     private void JP(CPU cpu, OpcodeInfo opcodeInfo) {
         int address = cpu.getMemory().readWord(cpu.getRegisters().getPC() + 1);
-        cpu.getRegisters().incrementPC(2);
+        //cpu.getRegisters().incrementPC(2);
         boolean shouldJump = true;
         if (opcodeInfo.getOperands().length > 1) {
             Operand xOpr = opcodeInfo.getOperands()[0];
@@ -390,7 +394,7 @@ public class OpcodeHandler {
         Operand yOpr;
         boolean shouldJump = false;
         byte e8 = (byte) cpu.getMemory().readByte(cpu.getRegisters().getPC() + 1);
-        cpu.getRegisters().incrementPC(1);
+        //cpu.getRegisters().incrementPC(1);
         if (opcodeInfo.getOperands().length > 1) {
             shouldJump = switch (xOpr.getName()) {
                 case "Z" -> cpu.getRegisters().isFlagSet(Registers.FLAG_ZERO);
@@ -402,7 +406,7 @@ public class OpcodeHandler {
         } else shouldJump = true;
 
         if (shouldJump) {
-            cpu.getRegisters().setPC(((cpu.getRegisters().getPC() + e8) + 1) & 0xFFFF);
+            cpu.getRegisters().setPC((((cpu.getRegisters().getPC() +1) + e8) + 1) & 0xFFFF);
             cpu.setDidJump(true);
         }
 
@@ -414,6 +418,8 @@ public class OpcodeHandler {
         int value = 0;
         int basePC = cpu.getRegisters().getPC();
         incDec incDecState = incDec.NULL;
+        boolean write8Bits = false;
+
 
         // Get value to be copied from Y operand
         switch (sourceOpr.getName()) {
@@ -421,6 +427,7 @@ public class OpcodeHandler {
             case "n8":
                 value = cpu.getMemory().readByte(cpu.getRegisters().getPC() + 1);
                 cpu.getRegisters().incrementPC();
+                write8Bits = true;
                 break;
             // [n16] or n16
             case "n16":
@@ -461,6 +468,13 @@ public class OpcodeHandler {
                     processFlags(cpu, opcodeInfo, sp, e8); // Flags are set only here
                 }
                 break;
+            case "C":
+                if (!sourceOpr.isImmediate()) {
+                    value = cpu.getMemory().readByte((0xFF00 + cpu.getRegisters().getC()));
+                } else {
+                    value = cpu.getRegisters().getByName(sourceOpr.getName()) & 0xFF;
+                }
+                break;
             // r8
             default:
                 value = cpu.getRegisters().getByName(sourceOpr.getName()) & 0xFF;
@@ -473,7 +487,8 @@ public class OpcodeHandler {
             case "a16":
                 // Is always an address
                 int targetAddress = cpu.getMemory().readWord(basePC + 1); // Read the value before PC was inc above
-                cpu.getMemory().writeWord(targetAddress, value);
+                if (!write8Bits) cpu.getMemory().writeWord(targetAddress, value);
+                else cpu.getMemory().writeByte(targetAddress, value & 0xFF);
                 break;
             // [r16]
             case "AF":
@@ -485,7 +500,7 @@ public class OpcodeHandler {
                 else if (destOpr.isDecrement())
                     incDecState = incDec.DEC_LEFT;
                 if (!destOpr.isImmediate()) {
-                        cpu.getMemory().writeByte(cpu.getRegisters().getByName(destOpr.getName()), value);
+                    cpu.getMemory().writeByte(cpu.getRegisters().getByName(destOpr.getName()), value);
                 } else
                     cpu.getRegisters().setByName(destOpr.getName(), (value &
                             (is8BitRegister(destOpr.getName()) ? 0xFF : 0xFFFF)));
@@ -497,11 +512,18 @@ public class OpcodeHandler {
                 } else
                     cpu.getMemory().writeWord(cpu.getRegisters().getByName(destOpr.getName()), value);
                 break;
+            case "C":
+                if (!destOpr.isImmediate()) {
+                    targetAddress = (0xFF00 + cpu.getRegisters().getC()) & 0xFFFF;
+                    cpu.getMemory().writeByte(targetAddress, value);
+                    break;
+                }
             default:
-                if (is8BitRegister(destOpr.getName()))
+                if (is8BitRegister(destOpr.getName())) {
                     cpu.getRegisters().setByName(destOpr.getName(), value & 0xFF);
-                else
+                } else {
                     cpu.getRegisters().setByName(destOpr.getName(), value & 0xFFFF);
+                }
                 break;
         }
 
@@ -517,16 +539,9 @@ public class OpcodeHandler {
                     break;
             }
         }
-    }
-
-    private void LD(CPU cpu, OpcodeInfo opcodeInfo, int temp) {
-        Memory memory = cpu.getMemory();
-        Operand left = opcodeInfo.getOperands()[0];
-        Operand right = opcodeInfo.getOperands()[1];
-        int destinationAddress;
-        int source;
-        if (left.getName().equals("n16")) {
-            //destinationAddress = memory.readByte()
+        if(opcodeInfo.getOpcode() == 0xF2 || opcodeInfo.getOpcode() == 0xE2){
+            int target = 0xFF00 + cpu.getRegisters().getC();
+            System.out.printf("\nLD wrote %02X to %04X.\n", value, target);
         }
     }
 
@@ -536,10 +551,10 @@ public class OpcodeHandler {
         int a8 = cpu.getMemory().readByte(cpu.getRegisters().getPC() + 1);
         cpu.getRegisters().incrementPC();
         if (xOpr.getName().equals("a8")) {
-            int address = 0xFF00 + (a8 & 0xFF);
+            int address = (0xFF00 + a8) & 0xFFFF;
             cpu.getMemory().writeByte(address, cpu.getRegisters().getA());
         } else {
-            int value = cpu.getMemory().readByte(0xFF00 + a8);
+            int value = cpu.getMemory().readByte((0xFF00 + a8) & 0xFFFF);
             cpu.getRegisters().setA(value);
         }
     }
@@ -640,8 +655,10 @@ public class OpcodeHandler {
     }
 
     private void RETI(CPU cpu, OpcodeInfo opcodeInfo) {
-        EI(cpu, null);
-        RET(cpu, null);
+        cpu.setPendingInterruptSwitch(true);
+        int returnAddr = cpu.getStack().pop();
+        cpu.getRegisters().setPC(returnAddr);
+        cpu.setDidJump(true);
     }
 
     private void RL(CPU cpu, OpcodeInfo opcodeInfo) {

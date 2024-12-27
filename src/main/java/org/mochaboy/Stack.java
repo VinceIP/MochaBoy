@@ -33,18 +33,18 @@ public class Stack {
         // Read low byte first
         int lowByte = cpu.getMemory().readByte(sp);
         int poppedLow = debugStack.pop();
-        if (poppedLow != (lowByte & 0xFF)) {
-            System.out.println("STACK ERROR: Popped low byte does not match.");
-        }
+//        if (poppedLow != (lowByte & 0xFF)) {
+//            System.out.println("STACK ERROR: Popped low byte does not match.");
+//        }
 
         sp = (sp + 1) & 0xFFFF; // Increment SP to point to high byte
 
         // Read high byte
         int highByte = cpu.getMemory().readByte(sp);
         int poppedHigh = debugStack.pop();
-        if (poppedHigh != (highByte & 0xFF)) {
-            System.out.println("STACK ERROR: Popped high byte does not match.");
-        }
+//        if (poppedHigh != (highByte & 0xFF)) {
+//            System.out.println("STACK ERROR: Popped high byte does not match.");
+//        }
 
         sp = (sp + 1) & 0xFFFF; // Increment SP again to point to the next value on the stack
         cpu.getRegisters().setSP(sp);

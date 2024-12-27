@@ -85,4 +85,29 @@ public class OpcodeInfo {
     public void setCbprefixed(boolean cbprefixed) {
         this.cbprefixed = cbprefixed;
     }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append(String.format("\nopcode=0x%02X, ", opcode));
+        sb.append("\nmnemonic=").append(mnemonic).append(", ");
+        sb.append("\nprefixed=").append(prefixed).append(", ");
+        sb.append("\ncbprefixed=").append(cbprefixed).append(", ");
+        sb.append(String.format("\nbytes=0x%02X, ", bytes));
+        sb.append("\ncycles=[");
+        if (cycles != null) {
+            for (int i = 0; i < cycles.length; i++) {
+                sb.append(String.format("0x%02X", cycles[i]));
+                if (i < cycles.length - 1) sb.append(", ");
+            }
+        }
+        sb.append("], \noperands=");
+        if (operands != null) {
+            for (Operand op : operands) sb.append(op.getName()).append(" ");
+        }
+        sb.append(", \nimmediate=").append(immediate).append(", ");
+        sb.append("\nflags=").append(flags.toString());
+        return sb.toString();
+    }
+
 }

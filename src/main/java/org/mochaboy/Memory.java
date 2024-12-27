@@ -60,9 +60,7 @@ public class Memory {
             bootRomEnabled = false;
             System.out.println("Boot rom disabled.");
         }
-        if(address == 0xFF85){
-            System.out.println("");
-        }
+
         if (bootRomEnabled && address <= 0x00FF) {
             return;
         }
