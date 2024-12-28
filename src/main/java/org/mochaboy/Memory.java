@@ -119,6 +119,10 @@ public class Memory {
         return memory.length;
     }
 
+    public byte[] getMemoryArray(){
+        return memory;
+    }
+
     public boolean isBootRomEnabled() {
         return bootRomEnabled;
     }

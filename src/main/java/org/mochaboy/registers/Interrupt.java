@@ -52,4 +52,33 @@ public class Interrupt {
         SERIAL,
         JOYPAD
     }
+
+    public String getInterruptsAsString() {
+        int IF = memory.readByte(map.get("IF"));
+        StringBuilder sb = new StringBuilder();
+        sb.append("Interrupts: ");
+        for (int i = 0; i < 5; i++) {
+            sb.append("\n");
+            if ((IF >> i) != 0) {
+                switch (i) {
+                    case 0:
+                        sb.append("vblank");
+                        break;
+                    case 1:
+                        sb.append("stat");
+                        break;
+                    case 2:
+                        sb.append("timer");
+                        break;
+                    case 3:
+                        sb.append("serial");
+                        break;
+                    case 4:
+                        sb.append("joypad");
+                        break;
+                }
+            } else sb.append("------");
+        }
+        return sb.toString();
+    }
 }

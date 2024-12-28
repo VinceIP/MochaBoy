@@ -55,11 +55,14 @@ public class CPU extends Thread {
         long lastDivUpdateCheck = 0;
         long lastTimaUpdateCheck = 0;
         long frameStartTime = System.nanoTime();
+        int divCount = 0;
         while (running) {
             OpcodeInfo opcode = fetch();
             int pc = registers.getPC();
 
-            if (pc == 0x2ED) {
+            if (pc > 0x100) {
+                //System.out.println(interrupt.getInterruptsAsString());
+                //System.out.printf("DIV: %02X\nTIMA: %02X\n\n", memory.readByte(map.get("DIV")), memory.readByte(map.get("TIMA")));
                 //printDebugLog(opcode);
                 //System.out.printf("\nResult: \nA: %02X\nFF85: %02X\n", getRegisters().getA(), memory.readByte(0xFF85));
 //                System.out.println("IE: " + Integer.toBinaryString(getMemory().readByte(map.get("IE"))));
@@ -69,7 +72,9 @@ public class CPU extends Thread {
 
             int cycles = 0;
             if (!isHalt()) {
+
                 cycles = execute(opcode);
+
                 elapsedEmulatedTimeNs += (long) (cycles * NS_PER_CYCLE);
                 int isPrefix = opcode.isPrefixed() ? 1 : 0;
                 if (!didJump) registers.setPC(pc + opcode.getBytes() + isPrefix);
@@ -93,6 +98,7 @@ public class CPU extends Thread {
 
 
             if (timer.isTacEnabled()) {
+                System.out.println("tac");
                 long timaTickRate = (long) (timer.getTacFreq() * NS_PER_CYCLE);
                 if (elapsedEmulatedTimeNs - lastTimaUpdateCheck >= timaTickRate) {
                     timer.incTima();

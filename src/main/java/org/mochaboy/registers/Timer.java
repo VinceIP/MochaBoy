@@ -20,8 +20,10 @@ public class Timer {
     }
 
     public void incDiv() {
-        int div = getDiv();
-        memory.writeByte(map.get("DIV"), (div + 1) & 0xFF);
+        byte div = (byte) ((byte) getDiv() & 0xFF);
+        int address = map.get("DIV");
+        div++;
+        memory.getMemoryArray()[address] = div;
     }
 
     public void resetDiv() {
