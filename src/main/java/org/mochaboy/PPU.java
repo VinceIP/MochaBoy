@@ -10,12 +10,16 @@ public class PPU {
     private PPU_MODE ppuMode;
     private int cycleCounter;
     private boolean lcdEnabled;
+    private boolean statInterruptLine;
+    private boolean lastStatInterruptLine;
+    private boolean lycEqualsLy;
     private final Map<String, Integer> memoryMap;
     private static final int SCANLINE_CYCLES = 456; //cycles per scanline
 
     private final Memory memory;
     private final FrameBuffer frameBuffer;
     private final GuiSwingDisplay display;
+    private Interrupt interrupt;
 
     private CPU cpu;
 
@@ -51,7 +55,7 @@ public class PPU {
     public void step(int cycles) {
         int lcdc = memory.readByte(memoryMap.get("LCDC"));
         lcdEnabled = (lcdc & 0x80) != 0;
-        if (!lcdEnabled) {
+        if (!isLcdEnabled()) {
             memory.writeByte(memoryMap.get("LY"), 0x00);
             setPpuMode(PPU_MODE.HBLANK);
             return;
@@ -90,7 +94,7 @@ public class PPU {
             cycleCounter -= SCANLINE_CYCLES;
             ly = incrementLY();
             //Reset mode, except during VBLANK
-            if (ly < 144) setPpuMode(PPU_MODE.OAM_SCAN);
+            //if (ly < 144) setPpuMode(PPU_MODE.OAM_SCAN);
 
 
         }
@@ -200,8 +204,12 @@ public class PPU {
 
     private void triggerVBlankInterrupt() {
         //Set IF to reflect vblank bit
-        cpu.getInterrupt().setInterrupt(Interrupt.INTERRUPT.VBLANK);
+        interrupt.setInterrupt(Interrupt.INTERRUPT.VBLANK);
         display.setFrameReady(true);
+        if (cpu.getRegisters().getPC() > 0x100) {
+            System.out.printf("\nPC: %02X\n", cpu.getRegisters().getPC());
+            System.out.println("doing vblank");
+        }
     }
 
     public int incrementLY() {
@@ -210,6 +218,7 @@ public class PPU {
         int LY = memory.readByte(LYAddress);
         LY = (LY + 1) % 154;
         memory.writeByte(LYAddress, LY);
+        checkLyCoincidence();
         return LY;
     }
 
@@ -255,19 +264,69 @@ public class PPU {
     }
 
     public void setPpuMode(PPU_MODE ppuMode) {
-        Map<String, Integer> map = memory.getMemoryMap();
         this.ppuMode = ppuMode;
-        int STATAddress = map.get("STAT");
-        int STAT = memory.readByte(STATAddress);
-        STAT = (STAT & 0xFC) | ppuMode.ordinal();
-        memory.writeByte(STATAddress, STAT);
-        int lcdc = memory.readByte(memoryMap.get("LCDC"));
-        if (!lcdEnabled) {
-            memory.writeByte(map.get("STAT"), (STAT & 0xFC));
+        updateStatRegister();
+        checkStatInterrupts();
+    }
+
+    private void updateStatRegister() {
+        Map<String, Integer> map = memory.getMemoryMap();
+        int statAddress = map.get("STAT");
+        int stat = memory.readByte(statAddress);
+
+        //Keep bits 7-2, get bits 1-0 from ppuMode enum
+        stat = (stat & 0xFC) | ppuMode.ordinal();
+
+        //Set lyc = ly flag (bit 2)
+        //Isolates bit 2 and clears it before combining with the boolean status
+        stat = (stat & ~0x04) | (lycEqualsLy ? 0x04 : 0x00);
+
+        memory.writeByte(statAddress, stat);
+    }
+
+    private void checkStatInterrupts() {
+        if (!lcdEnabled) return;
+
+        lastStatInterruptLine = statInterruptLine;
+        statInterruptLine = false;
+
+        int stat = memory.readByte(memoryMap.get("STAT"));
+
+        //Check interrupt sources
+        if ((stat & 0x40) != 0 && lycEqualsLy) {
+            statInterruptLine = true;
         }
+        if ((stat & 0x20) != 0 && ppuMode == PPU_MODE.OAM_SCAN) {
+            statInterruptLine = true;
+        }
+        if ((stat & 0x10) != 0 && ppuMode == PPU_MODE.VBLANK) {
+            statInterruptLine = true;
+        }
+        if ((stat & 0x08) != 0 && ppuMode == PPU_MODE.HBLANK) {
+            statInterruptLine = true;
+        }
+
+        //check rising edge
+        if (!lastStatInterruptLine && statInterruptLine) {
+            interrupt.setInterrupt(Interrupt.INTERRUPT.STAT);
+        }
+    }
+
+    private void checkLyCoincidence() {
+        int ly = memory.readByte(memoryMap.get("LY"));
+        int lyc = memory.readByte(memoryMap.get("LYC"));
+        lycEqualsLy = (ly == lyc);
+        updateStatRegister();
+        checkStatInterrupts();
     }
 
     public void setCPU(CPU cpu) {
         this.cpu = cpu;
+        interrupt = cpu.getInterrupt(); //This is stupid
+    }
+
+    private boolean isLcdEnabled() {
+        int lcdc = memory.readByte(memoryMap.get("LCDC"));
+        return ((lcdc >> 7) & 0x1) == 1;
     }
 }

@@ -9,10 +9,12 @@ public class Timer {
     public final static int DIV_INC_TIME_NS = 61035;
 
     private final Memory memory;
+    private final Interrupt interrupt;
     private final Map<String, Integer> map;
 
-    public Timer(Memory memory) {
+    public Timer(Memory memory, Interrupt interrupt) {
         this.memory = memory;
+        this.interrupt = interrupt;
         map = this.memory.getMemoryMap();
 
     }
@@ -31,6 +33,7 @@ public class Timer {
         if (tima == 0xFF) {
             resetTima(getTma());
             //Request interrupt
+            interrupt.setInterrupt(Interrupt.INTERRUPT.TIMER);
         }
         memory.writeByte(map.get("TIMA"), tima + 1 & 0xFF);
     }
@@ -43,7 +46,7 @@ public class Timer {
         memory.writeByte(map.get("TIMA"), value & 0xFF);
     }
 
-    public int getTma(){
+    public int getTma() {
         return memory.readByte(map.get("TMA"));
     }
 
@@ -57,7 +60,7 @@ public class Timer {
     }
 
     public int getTacFreq() {
-        int tac = getTac() & 0xb0000011;
+        int tac = getTac() & 0x03;
         int tacFreq = 0;
         switch (tac) {
             case 0x00:

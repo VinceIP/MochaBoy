@@ -36,6 +36,7 @@ public class Interrupt {
         int IF = memory.readByte(map.get("IF"));
         IF = IF | (1 << bit);
         memory.writeByte(map.get("IF"), IF);
+        cpu.setHalt(false);
     }
 
     public void handleInterrupt(INTERRUPT interrupt) {

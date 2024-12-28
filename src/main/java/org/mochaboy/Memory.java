@@ -58,7 +58,9 @@ public class Memory {
         }
         if (address == 0xFF50) {
             bootRomEnabled = false;
-            System.out.println("Boot rom disabled.");
+            //System.out.println("Boot rom disabled.");
+        } else if (address == memoryMap.getMap().get("DIV")) {
+            value = 0x00;
         }
 
         if (bootRomEnabled && address <= 0x00FF) {

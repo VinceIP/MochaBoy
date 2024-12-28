@@ -333,7 +333,7 @@ public class OpcodeHandler {
     }
 
     private void HALT(CPU cpu, OpcodeInfo opcodeInfo) {
-        if (!cpu.isLowPowerMode()) cpu.setLowPowerMode(true);
+        cpu.setHalt(true);
     }
 
     private void INC(CPU cpu, OpcodeInfo opcodeInfo) {
@@ -406,7 +406,7 @@ public class OpcodeHandler {
         } else shouldJump = true;
 
         if (shouldJump) {
-            cpu.getRegisters().setPC((((cpu.getRegisters().getPC() +1) + e8) + 1) & 0xFFFF);
+            cpu.getRegisters().setPC((((cpu.getRegisters().getPC() + 1) + e8) + 1) & 0xFFFF);
             cpu.setDidJump(true);
         }
 
@@ -539,9 +539,9 @@ public class OpcodeHandler {
                     break;
             }
         }
-        if(opcodeInfo.getOpcode() == 0xF2 || opcodeInfo.getOpcode() == 0xE2){
+        if (opcodeInfo.getOpcode() == 0xF2 || opcodeInfo.getOpcode() == 0xE2) {
             int target = 0xFF00 + cpu.getRegisters().getC();
-            System.out.printf("\nLD wrote %02X to %04X.\n", value, target);
+            //System.out.printf("\nLD wrote %02X to %04X.\n", value, target);
         }
     }
 
@@ -863,6 +863,7 @@ public class OpcodeHandler {
 
     private void STOP(CPU cpu, OpcodeInfo opcodeInfo) {
         cpu.setStopMode(true);
+        cpu.getMemory().writeByte(cpu.getMemory().getMemoryMap().get("DIV"), 0x00);
     }
 
     private void SUB(CPU cpu, OpcodeInfo opcodeInfo) {

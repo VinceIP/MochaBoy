@@ -15,18 +15,21 @@ public class CPU extends Thread {
     private Timer timer;
     private Stack stack;
     private Interrupt interrupt;
+    private Input input;
     private OpcodeLoader opcodeLoader;
     private OpcodeWrapper opcodeWrapper;
     private OpcodeHandler opcodeHandler;
     private long tStateCounter;
     private boolean IME;
     private boolean pendingInterruptSwitch;
+    private boolean halt;
     private boolean lowPowerMode;
     private boolean stopMode;
     private boolean didJump;
     private boolean running;
     private int totalCycles;
     private static final int CYCLES_PER_FRAME = 70224;
+    private static final double NS_PER_CYCLE = 238.4;
     private static final double FRAME_TIME_MS = 1000.0 / 59.7275;
     private boolean runOnce = false;
     private long elapsedEmulatedTimeNs;
@@ -36,9 +39,10 @@ public class CPU extends Thread {
         this.ppu = ppu;
         this.memory = memory;
         registers = new Registers();
-        timer = new Timer(this.memory);
-        stack = new Stack(this);
         interrupt = new Interrupt(this, this.memory);
+        timer = new Timer(this.memory, interrupt);
+        stack = new Stack(this);
+        input = new Input(memory);
         opcodeLoader = new OpcodeLoader();
         opcodeWrapper = opcodeLoader.getOpcodeWrapper();
         opcodeHandler = new OpcodeHandler(opcodeWrapper);
@@ -49,38 +53,31 @@ public class CPU extends Thread {
     public void run() {
         running = true;
         long lastDivUpdateCheck = 0;
+        long lastTimaUpdateCheck = 0;
         long frameStartTime = System.nanoTime();
-        int tacFreq = timer.getTacFreq();
-        int lastTacUpdateCheck = 0;
         while (running) {
             OpcodeInfo opcode = fetch();
             int pc = registers.getPC();
-//            if (pc == 0x233) {
+
+//            if (pc == 0x2ED) {
 //                printDebugLog(opcode);
+//                System.out.printf("\nResult: \nA: %02X\nFF85: %02X\n", getRegisters().getA(), memory.readByte(0xFF85));
 //            }
 
-//            if(pc >= 0xFF80 && pc <= 0xFFFE){
-//                printHRAM();
-//            }
-
-//            if (opcode.getOpcode() == 0xE2 || opcode.getOpcode() == 0xF2) {
-//                printHRAM();
-//            }
-            if (pc > 0x02F0) {
-                printDebugLog(opcode);
+            int cycles = 0;
+            if (!isHalt()) {
+                cycles = execute(opcode);
+                elapsedEmulatedTimeNs += (long) (cycles * NS_PER_CYCLE);
+                int isPrefix = opcode.isPrefixed() ? 1 : 0;
+                if (!didJump) registers.setPC(pc + opcode.getBytes() + isPrefix);
+                else didJump = false;
+                //handle pending IME switch
+                if (isPendingInterruptSwitch()) {
+                    setIME(true);
+                    setPendingInterruptSwitch(false);
+                }
             }
 
-            int cycles = execute(opcode);
-            elapsedEmulatedTimeNs += (long) (cycles * 238.4);
-            int isPrefix = opcode.isPrefixed() ? 1 : 0;
-            if (!didJump) registers.setPC(pc + opcode.getBytes() + isPrefix);
-            else didJump = false;
-            //handle pending IME switch
-            if (isPendingInterruptSwitch()) {
-                setIME(true);
-                setPendingInterruptSwitch(false);
-            }
-            //handle HALT
             ppu.step(cycles);
             totalCycles += cycles;
 
@@ -90,6 +87,16 @@ public class CPU extends Thread {
                 timer.incDiv();
                 lastDivUpdateCheck = elapsedEmulatedTimeNs;
             }
+
+
+            if (timer.isTacEnabled()) {
+                long timaTickRate = (long) (timer.getTacFreq() * NS_PER_CYCLE);
+                if (elapsedEmulatedTimeNs - lastTimaUpdateCheck >= timaTickRate) {
+                    timer.incTima();
+                    lastTimaUpdateCheck = elapsedEmulatedTimeNs;
+                }
+            }
+
 
             //Handle interrupts
             if (isIME()) {
@@ -146,45 +153,6 @@ public class CPU extends Thread {
     public void stopCPU() {
         running = false;
     }
-
-    private void printDebugLog(OpcodeInfo opcode) {
-        int pc = getRegisters().getPC();
-        int rawOpcode = memory.readByte(pc) & 0xFF;
-        Operand[] ops = opcode.getOperands();
-        StringBuilder sb = new StringBuilder();
-        // We'll track where to read immediate values from
-        int immOffset = 1; // start from pc+1
-
-        for (int i = 0; i < ops.length; i++) {
-            String name = ops[i].getName();
-            switch (name) {
-                case "n8", "d8", "a8", "e8": {
-                    int val = memory.readByte(pc + immOffset) & 0xFF;
-                    sb.append(String.format("0x%02X", val));
-                    immOffset++;
-                    break;
-                }
-                case "n16", "d16", "a16": {
-                    int low = memory.readByte(pc + immOffset) & 0xFF;
-                    int high = memory.readByte(pc + immOffset + 1) & 0xFF;
-                    int val = (high << 8) | low;
-                    sb.append(String.format("0x%04X", val));
-                    immOffset += 2;
-                    break;
-                }
-                default:
-                    sb.append(name);
-                    break;
-            }
-            if (i < ops.length - 1) {
-                sb.append(", ");
-            }
-        }
-
-        System.out.printf("PC=%04X OPCODE=%02X (%s) %s\n",
-                pc, rawOpcode, opcode.getMnemonic(), sb.toString());
-    }
-
 
     public OpcodeInfo fetch() {
         int opcode = memory.readByte(registers.getPC()) & 0xFF;
@@ -277,6 +245,14 @@ public class CPU extends Thread {
         this.didJump = didJump;
     }
 
+    public boolean isHalt() {
+        return halt;
+    }
+
+    public void setHalt(boolean halt) {
+        this.halt = halt;
+    }
+
     public long getElapsedEmulatedTimeNs() {
         return elapsedEmulatedTimeNs;
     }
@@ -294,5 +270,55 @@ public class CPU extends Thread {
         }
         System.out.println("-----------------------------------------------------------------");
     }
+
+    private void printDebugLog(OpcodeInfo opcode) {
+        int pc = getRegisters().getPC();
+        int rawOpcode = memory.readByte(pc) & 0xFF;
+        Operand[] ops = opcode.getOperands();
+        StringBuilder sb = new StringBuilder();
+        int immOffset = 1; // For reading immediate bytes after this opcode
+
+        // Print the opcode operands as usual
+        for (int i = 0; i < ops.length; i++) {
+            String name = ops[i].getName();
+            switch (name) {
+                case "n8", "d8", "a8", "e8" -> {
+                    int val = memory.readByte(pc + immOffset) & 0xFF;
+                    sb.append(String.format("0x%02X", val));
+                    immOffset++;
+                }
+                case "n16", "d16", "a16" -> {
+                    int low = memory.readByte(pc + immOffset) & 0xFF;
+                    int high = memory.readByte(pc + immOffset + 1) & 0xFF;
+                    int val = (high << 8) | low;
+                    sb.append(String.format("0x%04X", val));
+                    immOffset += 2;
+                }
+                default -> sb.append(name);
+            }
+            if (i < ops.length - 1) {
+                sb.append(", ");
+            }
+        }
+
+        // Build a small string to append for RET instructions.
+        String extra = "";
+        String mnemonic = opcode.getMnemonic().toUpperCase();
+
+        // Check if the opcode is RET, RETI, or conditional RETs (RET Z, RET NZ, RET C, etc.)
+        // If so, peek at the stack to see where we *would* return if the condition passes.
+        if (mnemonic.startsWith("RET")) {
+            int sp = getRegisters().getSP();
+            // Peek at the 2 bytes on top of the stack:
+            int low = memory.readByte(sp) & 0xFF;
+            int high = memory.readByte(sp + 1) & 0xFF;
+            int returnAddr = (high << 8) | low;
+            extra = String.format(" -> returns to 0x%04X", returnAddr);
+        }
+
+        System.out.printf("PC=%04X OPCODE=%02X (%s) %s%s\n",
+                pc, rawOpcode, opcode.getMnemonic(), sb.toString(), extra);
+    }
+
 
 }

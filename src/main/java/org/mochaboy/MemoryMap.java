@@ -12,6 +12,7 @@ public class MemoryMap {
     }
 
     private void mapMemory() {
+        map.put("JOYP", 0xFF00);
         map.put("DIV", 0xFF04);
         map.put("TIMA", 0xFF05);
         map.put("TMA", 0xFF06);
