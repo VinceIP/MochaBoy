@@ -36,6 +36,12 @@ public class Memory {
         if (bootRomEnabled && address <= 0x00FF) {
             return bootRom[address] & 0xFF;
         }
+        if(address == 0xFF01){
+            return 0xFF;
+        }
+        if(address == 0xFF02){
+            return 0x7E;
+        }
         return memory[address] & 0xFF;
     }
 
@@ -52,22 +58,62 @@ public class Memory {
     public void writeByte(int address, int value) {
         value = value & 0xFF;
         address = address & 0xFFFF;
-        if (address >= 0x98E0 && address < 0x9940) {
-            //System.out.println(String.format("Writing %02X at %02X", value, address));
 
+        if(address == 0xFFB6){
+            System.out.println("");
         }
+
         if (address == 0xFF50) {
             bootRomEnabled = false;
             //System.out.println("Boot rom disabled.");
-        } else if (address == memoryMap.getMap().get("DIV")) {
+        }
+        // Reset DIV if writing to DIV register
+        else if (address == memoryMap.getMap().get("DIV")) {
             value = 0x00;
         }
+        else if (address == 0xFFFF) {
+            //System.out.printf("IE register written: 0x%02X\n", value);
+        }
 
+        // ----- Minimal no-link-cable emulation: handle 0xFF01 and 0xFF02 -----
+        if (address == 0xFF01) {
+            memory[address] = (byte) value;
+            return;
+        }
+        if (address == 0xFF02) {
+            // Tetris is writing the Serial Control register
+            memory[address] = (byte) value;
+
+            // Check if bit 7 is set => "Start Transfer"
+            if ((value & 0x80) != 0) {
+                // 1) Immediately complete the transfer:
+                //    Put 0xFF in SB => "no partner" data
+                memory[0xFF01] = (byte) 0xFF;
+
+                // 2) Clear bit 7 in SC => transfer done
+                int newVal = value & 0x7F;
+                memory[address] = (byte) newVal;
+
+                // 3) Optionally raise the Serial interrupt (bit 3 in IF),
+                //    if Tetris relies on that to continue
+                int ifAddress = memoryMap.getMap().get("IF");
+                int ifVal = memory[ifAddress] & 0xFF;
+                ifVal |= (1 << 3); // set bit 3 => Serial interrupt
+                memory[ifAddress] = (byte) ifVal;
+            }
+            return;
+        }
+        // --------------------------------------------------------------------
+
+        // If boot ROM is still enabled and address <= 0x00FF, skip writing
         if (bootRomEnabled && address <= 0x00FF) {
             return;
         }
-        memory[address] = (byte) (value & 0xFF);
+
+        // Normal memory write for all other addresses
+        memory[address] = (byte) value;
     }
+
 
     public void writeWord(int address, int value) {
         address = address & 0xFFFF;

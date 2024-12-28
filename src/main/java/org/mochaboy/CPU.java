@@ -65,7 +65,15 @@ public class CPU extends Thread {
                 postBootInit();
                 didPostBoot = true;
             }
-            if(pc >= 0x100){
+
+            //String interrupts = interrupt.getInterruptsAsString();
+//            if(pc > 0x0100 && !interrupts.contains("vblank")){
+//                System.out.printf("\nPC: %04X - vblank disabled", pc);
+//            } else if (pc > 0x100){
+//                System.out.printf("\nPC: %04X - vblank enabled", pc);
+//            }
+            //TODO: Disable cart from writing values to ROM space
+            if(pc == 0x0254){
                 printDebugLog(opcode);
             }
 
@@ -79,6 +87,7 @@ public class CPU extends Thread {
                 }
 
                 cycles = execute(opcode);
+                if(pc == 0x254)System.out.println(memory.readByte(0x2000));
 
                 elapsedEmulatedTimeNs += (long) (cycles * NS_PER_CYCLE);
                 int isPrefix = opcode.isPrefixed() ? 1 : 0;
@@ -113,6 +122,7 @@ public class CPU extends Thread {
             if (isIME()) {
                 int IE = memory.readByte(map.get("IE"));
                 int IF = memory.readByte(map.get("IF"));
+                //System.out.printf("\nIE: %02X\nIF: %02X\n", IE, IF);
                 int triggered = IE & IF; //Get interrupts currently pending & interrupts enabled
                 for (int i = 0; i < 5; i++) { //Check bits of IF in order of interrupt priority
                     if (((triggered >> i) & 1) == 1) {

@@ -55,13 +55,16 @@ public class PPU {
     public void step(int cycles) {
         int lcdc = memory.readByte(memoryMap.get("LCDC"));
         lcdEnabled = (lcdc & 0x80) != 0;
-        if (!isLcdEnabled()) {
-            memory.writeByte(memoryMap.get("LY"), 0x00);
-            setPpuMode(PPU_MODE.HBLANK);
-            return;
-        }
+//        if (!isLcdEnabled()) {
+//            memory.writeByte(memoryMap.get("LY"), 0x00);
+//            setPpuMode(PPU_MODE.HBLANK);
+//            return;
+//        }
         int lyAddress = memory.getMemoryMap().get("LY");
         int ly = memory.readByte(lyAddress);
+        if(cpu.getRegisters().getPC() > 0x100){
+            //System.out.printf("LY: %02X", ly);
+        }
         cycleCounter += cycles;
 
         if (ly >= 144) {

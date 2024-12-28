@@ -549,7 +549,7 @@ public class OpcodeHandler {
         Operand xOpr = opcodeInfo.getOperands()[0];
         Operand yOpr = opcodeInfo.getOperands()[1];
         int a8 = cpu.getMemory().readByte(cpu.getRegisters().getPC() + 1);
-        cpu.getRegisters().incrementPC();
+        //cpu.getRegisters().incrementPC();
         if (xOpr.getName().equals("a8")) {
             int address = (0xFF00 + a8) & 0xFFFF;
             cpu.getMemory().writeByte(address, cpu.getRegisters().getA());
