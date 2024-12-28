@@ -59,10 +59,13 @@ public class CPU extends Thread {
             OpcodeInfo opcode = fetch();
             int pc = registers.getPC();
 
-//            if (pc == 0x2ED) {
-//                printDebugLog(opcode);
-//                System.out.printf("\nResult: \nA: %02X\nFF85: %02X\n", getRegisters().getA(), memory.readByte(0xFF85));
-//            }
+            if (pc == 0x2ED) {
+                //printDebugLog(opcode);
+                //System.out.printf("\nResult: \nA: %02X\nFF85: %02X\n", getRegisters().getA(), memory.readByte(0xFF85));
+//                System.out.println("IE: " + Integer.toBinaryString(getMemory().readByte(map.get("IE"))));
+//                System.out.println("IF: " + Integer.toBinaryString(getMemory().readByte(map.get("IF"))));
+
+            }
 
             int cycles = 0;
             if (!isHalt()) {

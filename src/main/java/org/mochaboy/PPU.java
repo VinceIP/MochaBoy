@@ -207,8 +207,9 @@ public class PPU {
         interrupt.setInterrupt(Interrupt.INTERRUPT.VBLANK);
         display.setFrameReady(true);
         if (cpu.getRegisters().getPC() > 0x100) {
-            System.out.printf("\nPC: %02X\n", cpu.getRegisters().getPC());
+            System.out.printf("\nPC: %04X\n", cpu.getRegisters().getPC());
             System.out.println("doing vblank");
+            System.out.printf("IF: %02X\n", memoryMap.get("IF"));
         }
     }
 

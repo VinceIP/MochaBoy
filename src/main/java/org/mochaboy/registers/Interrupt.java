@@ -34,7 +34,7 @@ public class Interrupt {
     public void setInterrupt(INTERRUPT interrupt) {
         int bit = interrupt.ordinal();
         int IF = memory.readByte(map.get("IF"));
-        IF = IF | (1 << bit);
+        IF = (IF | (1 << bit)) & 0xFF;
         memory.writeByte(map.get("IF"), IF);
         cpu.setHalt(false);
     }
