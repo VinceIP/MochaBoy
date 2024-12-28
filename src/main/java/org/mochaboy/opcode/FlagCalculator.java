@@ -210,7 +210,7 @@ public class FlagCalculator {
         calculators.put("CP", (cpu, xVal, yVal, operands) -> {
             FlagConditions conditions = new FlagConditions();
             conditions.isZero = ((xVal - yVal) & 0xFF) == 0;
-            conditions.isHalfCarry = ((xVal & 0xF0) < (yVal & 0xF0)) || ((xVal & 0xF) < (yVal & 0xF));
+            conditions.isHalfCarry = ((xVal ^ yVal ^ ((xVal - yVal) & 0xFF)) & 0x10) != 0;
             conditions.isCarry = (yVal > xVal);
             return conditions;
         });

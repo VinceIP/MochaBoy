@@ -193,7 +193,7 @@ public class OpcodeHandler {
         // Read the address to jump to (16-bit) from PC+1 and PC+2
         int callAddress = cpu.getMemory().readWord(cpu.getRegisters().getPC() + 1);
         // Calculate the return address as the current PC + 3 (length of the CALL instruction)
-        int returnAddress = cpu.getRegisters().getPC() + 3;
+        int returnAddress = cpu.getRegisters().getPC()+3;
 
         boolean shouldCall = true;
 
@@ -588,18 +588,22 @@ public class OpcodeHandler {
 
     private void POP(CPU cpu, OpcodeInfo opcodeInfo) {
         Operand xOpr = opcodeInfo.getOperands()[0];
-        int poppedVal = cpu.getStack().pop();
-        //Flags only affected with AF
-        if (xOpr.getName().equals("AF")) {
+        int poppedVal = cpu.getStack().pop() & 0xFFFF; // 16-bit pop
+
+        if ("AF".equals(xOpr.getName())) {
+            // The high byte is A, the low byte is F
             int A = (poppedVal >> 8) & 0xFF;
-            int F = poppedVal & 0xF0; // mask out the lower nibble
+            int F = poppedVal & 0xF0; // Mask out lower nibble; real GB ignores bits 3..0 in F
+
             cpu.getRegisters().setA(A);
             cpu.getRegisters().setF(F);
-            processFlags(cpu, opcodeInfo, poppedVal, 0);
-            return;
+
+        } else {
+            // If popping into BC, DE, HL, etc. just load the popped value.
+            applyResult(cpu, xOpr.getName(), poppedVal);
         }
-        applyResult(cpu, xOpr.getName(), poppedVal);
     }
+
 
     private void PUSH(CPU cpu, OpcodeInfo opcodeInfo) {
         Operand xOpr = opcodeInfo.getOperands()[0];
@@ -655,7 +659,7 @@ public class OpcodeHandler {
     }
 
     private void RETI(CPU cpu, OpcodeInfo opcodeInfo) {
-        cpu.setPendingInterruptSwitch(true);
+        cpu.setIME(true);
         int returnAddr = cpu.getStack().pop();
         cpu.getRegisters().setPC(returnAddr);
         cpu.setDidJump(true);

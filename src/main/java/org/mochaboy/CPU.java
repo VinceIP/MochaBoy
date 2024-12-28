@@ -56,22 +56,27 @@ public class CPU extends Thread {
         long lastTimaUpdateCheck = 0;
         long frameStartTime = System.nanoTime();
         int divCount = 0;
+        boolean didPostBoot = false;
         while (running) {
             OpcodeInfo opcode = fetch();
             int pc = registers.getPC();
 
-            if (pc > 0x100) {
-                //System.out.println(interrupt.getInterruptsAsString());
-                //System.out.printf("DIV: %02X\nTIMA: %02X\n\n", memory.readByte(map.get("DIV")), memory.readByte(map.get("TIMA")));
-                //printDebugLog(opcode);
-                //System.out.printf("\nResult: \nA: %02X\nFF85: %02X\n", getRegisters().getA(), memory.readByte(0xFF85));
-//                System.out.println("IE: " + Integer.toBinaryString(getMemory().readByte(map.get("IE"))));
-//                System.out.println("IF: " + Integer.toBinaryString(getMemory().readByte(map.get("IF"))));
-
+            if (pc == 0x100 && !didPostBoot) {
+                postBootInit();
+                didPostBoot = true;
             }
+            if(pc >= 0x100){
+                printDebugLog(opcode);
+            }
+
 
             int cycles = 0;
             if (!isHalt()) {
+
+                if (isPendingInterruptSwitch()) {
+                    setIME(true);
+                    setPendingInterruptSwitch(false);
+                }
 
                 cycles = execute(opcode);
 
@@ -80,10 +85,7 @@ public class CPU extends Thread {
                 if (!didJump) registers.setPC(pc + opcode.getBytes() + isPrefix);
                 else didJump = false;
                 //handle pending IME switch
-                if (isPendingInterruptSwitch()) {
-                    setIME(true);
-                    setPendingInterruptSwitch(false);
-                }
+
             }
 
             ppu.step(cycles);
@@ -98,7 +100,7 @@ public class CPU extends Thread {
 
 
             if (timer.isTacEnabled()) {
-                System.out.println("tac");
+                //System.out.println("tac");
                 long timaTickRate = (long) (timer.getTacFreq() * NS_PER_CYCLE);
                 if (elapsedEmulatedTimeNs - lastTimaUpdateCheck >= timaTickRate) {
                     timer.incTima();
@@ -185,6 +187,15 @@ public class CPU extends Thread {
             return opcodeHandler.execute(this, opcodeInfo);
     }
 
+    private void postBootInit() {
+        Registers reg = getRegisters();
+        reg.setAF(0x01B0);
+        reg.setBC(0x0013);
+        reg.setDE(0x00D8);
+        reg.setHL(0x014D);
+        reg.setSP(0xFFFE);
+    }
+
     public Memory getMemory() {
         return memory;
     }
@@ -227,7 +238,7 @@ public class CPU extends Thread {
 
     public void setPendingInterruptSwitch(boolean pendingInterruptSwitch) {
         this.pendingInterruptSwitch = pendingInterruptSwitch;
-        setIME(true); //GET RID OF THIS LATER
+        //setIME(true); //GET RID OF THIS LATER
     }
 
     public boolean isLowPowerMode() {

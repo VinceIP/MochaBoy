@@ -94,8 +94,7 @@ public class PPU {
             cycleCounter -= SCANLINE_CYCLES;
             ly = incrementLY();
             //Reset mode, except during VBLANK
-            //if (ly < 144) setPpuMode(PPU_MODE.OAM_SCAN);
-
+            if (ly < 144) setPpuMode(PPU_MODE.OAM_SCAN);
 
         }
     }
@@ -206,18 +205,23 @@ public class PPU {
         //Set IF to reflect vblank bit
         interrupt.setInterrupt(Interrupt.INTERRUPT.VBLANK);
         display.setFrameReady(true);
-        if (cpu.getRegisters().getPC() > 0x100) {
-            System.out.printf("\nPC: %04X\n", cpu.getRegisters().getPC());
-            System.out.println("doing vblank");
-            System.out.printf("IF: %02X\n", memoryMap.get("IF"));
-        }
+//        if (cpu.getRegisters().getPC() > 0x100) {
+//            System.out.printf("\nPC: %04X\n", cpu.getRegisters().getPC());
+//            System.out.println("doing vblank");
+//            System.out.printf("IF: %02X\n", memory.readByte(memoryMap.get("IF")));
+//        }
     }
 
     public int incrementLY() {
         Map<String, Integer> map = memory.getMemoryMap();
         int LYAddress = map.get("LY");
         int LY = memory.readByte(LYAddress);
-        LY = (LY + 1) % 154;
+        //LY = (LY + 1) % 154;
+        LY++;
+        if (LY == 154) {
+            LY = 0;
+            setPpuMode(PPU_MODE.OAM_SCAN);
+        }
         memory.writeByte(LYAddress, LY);
         checkLyCoincidence();
         return LY;
