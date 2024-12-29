@@ -30,6 +30,10 @@ public class MemoryMap {
         map.put("WY", 0xFF4A);
         map.put("WX", 0xFF4B);
         map.put("IE", 0xFFFF);
+        map.put("VRAM_START", 0x8000);
+        map.put("VRAM_END", 0x9FFF);
+        map.put("OAM_START", 0xFE00);
+        map.put("OAM_END", 0xFE9F);
     }
 
     public Map<String, Integer> getMap() {

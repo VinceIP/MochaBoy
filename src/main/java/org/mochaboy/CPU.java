@@ -38,6 +38,7 @@ public class CPU extends Thread {
     public CPU(PPU ppu, Memory memory) throws IOException {
         this.ppu = ppu;
         this.memory = memory;
+        this.memory.setPpu(this.ppu);
         registers = new Registers();
         interrupt = new Interrupt(this, this.memory);
         timer = new Timer(this.memory, interrupt);
@@ -66,15 +67,27 @@ public class CPU extends Thread {
                 didPostBoot = true;
             }
 
+            if(pc > 0x080){
+                System.out.println("");
+            }
+
             //String interrupts = interrupt.getInterruptsAsString();
 //            if(pc > 0x0100 && !interrupts.contains("vblank")){
 //                System.out.printf("\nPC: %04X - vblank disabled", pc);
 //            } else if (pc > 0x100){
 //                System.out.printf("\nPC: %04X - vblank enabled", pc);
 //            }
-            //TODO: Disable cart from writing values to ROM space
-            if(pc == 0x0254){
+
+            if ((pc >= 0x2ED && pc <= 0x2F0)) {
                 printDebugLog(opcode);
+                System.out.println("IME: " + isIME());
+                System.out.printf("IF: %02X\n", memory.readByte(map.get("IF")));
+                System.out.printf("IE: %02X\n", memory.readByte(map.get("IE")));
+                int ly = memory.readByte(map.get("LY"));
+                System.out.println("LY: " + ly);
+                if (ly == 144) {
+                    System.out.println("vblank: YES");
+                }
             }
 
 
@@ -87,7 +100,6 @@ public class CPU extends Thread {
                 }
 
                 cycles = execute(opcode);
-                if(pc == 0x254)System.out.println(memory.readByte(0x2000));
 
                 elapsedEmulatedTimeNs += (long) (cycles * NS_PER_CYCLE);
                 int isPrefix = opcode.isPrefixed() ? 1 : 0;

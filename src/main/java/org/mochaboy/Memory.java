@@ -9,12 +9,15 @@ public class Memory {
     private byte[] memory;
     private byte[] bootRom;
     private Cartridge cartridge;
-    private MemoryMap memoryMap;
+    private Map<String, Integer> map;
+    private PPU ppu;
     private boolean bootRomEnabled = true;
+    private boolean oamBlocked = false;
+    private boolean vramBlocked = false;
 
     public Memory(Cartridge cartridge) {
         this.cartridge = cartridge;
-        memoryMap = new MemoryMap();
+        map = new MemoryMap().getMap();
         memory = new byte[0x10000];
         bootRom = new byte[0x100];
         init();
@@ -33,13 +36,23 @@ public class Memory {
      */
     public int readByte(int address) {
         address &= 0xFFFF;
+
+        //If reading from OAM
+//        if (address >= map.get("OAM_START") && address <= map.get("OAM_END")) {
+//            if (oamBlocked) return 0xFF;
+//        }
+//
+//        if(address >= map.get("VRAM_START") && address <= map.get("VRAM_END")){
+//            if(vramBlocked) return 0xFF;
+//        }
+
         if (bootRomEnabled && address <= 0x00FF) {
             return bootRom[address] & 0xFF;
         }
-        if(address == 0xFF01){
+        if (address == 0xFF01) {
             return 0xFF;
         }
-        if(address == 0xFF02){
+        if (address == 0xFF02) {
             return 0x7E;
         }
         return memory[address] & 0xFF;
@@ -59,20 +72,29 @@ public class Memory {
         value = value & 0xFF;
         address = address & 0xFFFF;
 
-        if(address == 0xFFB6){
-            System.out.println("");
+        //Prohibit writes to ROM space.
+        //TODO: Implement MBC detection and bank switching here
+        if (address < 0x8000) {
+            return;
         }
+
+        //Prohibited usage
+        //Look into OAM corruption bug when writes are requested here
+//        if (address >= map.get("OAM_START") && address <= map.get("OAM_END")) {
+//            if (oamBlocked) return;
+//        }
+//
+//        if(address >= map.get("VRAM_START") && address <= map.get("VRAM_END")){
+//            if(vramBlocked) return;
+//        }
 
         if (address == 0xFF50) {
             bootRomEnabled = false;
             //System.out.println("Boot rom disabled.");
         }
         // Reset DIV if writing to DIV register
-        else if (address == memoryMap.getMap().get("DIV")) {
+        else if (address == map.get("DIV")) {
             value = 0x00;
-        }
-        else if (address == 0xFFFF) {
-            //System.out.printf("IE register written: 0x%02X\n", value);
         }
 
         // ----- Minimal no-link-cable emulation: handle 0xFF01 and 0xFF02 -----
@@ -96,7 +118,7 @@ public class Memory {
 
                 // 3) Optionally raise the Serial interrupt (bit 3 in IF),
                 //    if Tetris relies on that to continue
-                int ifAddress = memoryMap.getMap().get("IF");
+                int ifAddress = map.get("IF");
                 int ifVal = memory[ifAddress] & 0xFF;
                 ifVal |= (1 << 3); // set bit 3 => Serial interrupt
                 memory[ifAddress] = (byte) ifVal;
@@ -165,7 +187,7 @@ public class Memory {
         return memory.length;
     }
 
-    public byte[] getMemoryArray(){
+    public byte[] getMemoryArray() {
         return memory;
     }
 
@@ -178,6 +200,26 @@ public class Memory {
     }
 
     public Map<String, Integer> getMemoryMap() {
-        return memoryMap.getMap();
+        return map;
+    }
+
+    public void setPpu(PPU ppu) {
+        this.ppu = ppu;
+    }
+
+    public boolean isOamBlocked() {
+        return oamBlocked;
+    }
+
+    public void setOamBlocked(boolean oamBlocked) {
+        this.oamBlocked = oamBlocked;
+    }
+
+    public boolean isVramBlocked() {
+        return vramBlocked;
+    }
+
+    public void setVramBlocked(boolean vramBlocked) {
+        this.vramBlocked = vramBlocked;
     }
 }

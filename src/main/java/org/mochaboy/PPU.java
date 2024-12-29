@@ -62,16 +62,13 @@ public class PPU {
 //        }
         int lyAddress = memory.getMemoryMap().get("LY");
         int ly = memory.readByte(lyAddress);
-        if(cpu.getRegisters().getPC() > 0x100){
-            //System.out.printf("LY: %02X", ly);
-        }
+
         cycleCounter += cycles;
 
         if (ly >= 144) {
             // Enter V-Blank mode at LY = 144
             if (ppuMode != PPU_MODE.VBLANK) {
                 setPpuMode(PPU_MODE.VBLANK);
-                triggerVBlankInterrupt(); // Only trigger once when entering V-Blank
                 SwingUtilities.invokeLater(display::updateFrame);
             }
         } else if (cycleCounter < 80) {
@@ -109,7 +106,7 @@ public class PPU {
         int ly = memory.readByte(memoryMap.get("LY"));
         int bgp = memory.readByte(memoryMap.get("BGP"));
 
-        if (!lcdEnabled || (lcdc & 0x01) == 0) return;
+        //if (!lcdEnabled || (lcdc & 0x01) == 0) return;
 
 //        System.out.println("drawScanline: LCDC = 0x" + String.format("%02X", lcdc));
 //        System.out.println("drawScanline: SCY = 0x" + String.format("%02X", scy));
@@ -133,25 +130,8 @@ public class PPU {
             int tileData1 = memory.readByte(tileDataAddress + (tileY * 2));
             int tileData2 = memory.readByte(tileDataAddress + (tileY * 2) + 1);
 
-//            if (tileData1 != 0 && tileData2 != 0) {
-//                System.out.println(String.format("Tile data base: %04X", tileDataBase));
-//                System.out.println(String.format("Tile data address: %02X", tileAddress));
-//                System.out.println("Tile data 1: " + tileData1);
-//                System.out.println("Tile data 2: " + tileData2);
-//            }
-
-
             int tileX = (scx + pixel) % 8;
 
-//            if (cpu.getElapsedEmulatedTimeNs() >= 2_000_000_000L) {
-//                System.out.println(String.format("lcdc: %02X, scx: %02X, scy: %02X, ly: %02X", lcdc, scx, scy, ly));
-//                System.out.println(String.format("tileMapBase: %04X, tileDataBase: %04X", tileMapBase, tileDataBase));
-//                System.out.println(String.format("tileRow: %02X, pixel: %02X, tileCol: %02X", tileRow, pixel, tileCol));
-//                System.out.println(String.format("tileAddress: %04X, tileNum: %02X", tileAddress, tileNum));
-//                System.out.println(String.format("tileDataAddress: %04X", tileDataAddress));
-//                System.out.println(String.format("tileY: %02X, tileX: %02X", tileY, tileX));
-//                System.out.println(String.format("tileData1: %02X, tileData2: %02X", tileData1, tileData2));
-//            }
             int colorBitLow = (tileData1 >> 7 - tileX) & 1;
             int colorBitHigh = (tileData2 >> (7 - tileX)) & 1;
 
@@ -163,31 +143,9 @@ public class PPU {
 
             frameBuffer.setPixel(pixel, ly, actualColor);
 
-
         }
 
     }
-
-    private void loadTestTiles() {
-        // Example checkerboard pattern (8x8 tile)
-        int[] checkerboardTile = {
-                0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00,
-                0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF,
-                0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00,
-                0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF,
-                0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00,
-                0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF,
-                0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00,
-                0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF
-        };
-
-        int tileAddress = 0x8000;
-        for (int i = 0; i < checkerboardTile.length; i++) {
-            memory.writeByte(tileAddress + i, checkerboardTile[i]);
-        }
-        memory.writeByte(0x9800, 0);
-    }
-
 
     private int getColor(int colorIndex) {
         switch (colorIndex) {
@@ -202,17 +160,6 @@ public class PPU {
             default:
                 return 0xFF000000;
         }
-    }
-
-    private void triggerVBlankInterrupt() {
-        //Set IF to reflect vblank bit
-        interrupt.setInterrupt(Interrupt.INTERRUPT.VBLANK);
-        display.setFrameReady(true);
-//        if (cpu.getRegisters().getPC() > 0x100) {
-//            System.out.printf("\nPC: %04X\n", cpu.getRegisters().getPC());
-//            System.out.println("doing vblank");
-//            System.out.printf("IF: %02X\n", memory.readByte(memoryMap.get("IF")));
-//        }
     }
 
     public int incrementLY() {
@@ -273,6 +220,24 @@ public class PPU {
 
     public void setPpuMode(PPU_MODE ppuMode) {
         this.ppuMode = ppuMode;
+//        switch (ppuMode) {
+//            case HBLANK:
+//                memory.setVramBlocked(false);
+//                memory.setOamBlocked(false);
+//                break;
+//            case VBLANK:
+//                memory.setVramBlocked(false);
+//                memory.setOamBlocked(false);
+//                interrupt.setInterrupt(Interrupt.INTERRUPT.VBLANK);
+//            case OAM_SCAN:
+//                memory.setVramBlocked(false);
+//                memory.setOamBlocked(true);
+//                break;
+//            case DRAWING:
+//                memory.setVramBlocked(true);
+//                memory.setOamBlocked(true);
+//                break;
+//        }
         updateStatRegister();
         checkStatInterrupts();
     }
