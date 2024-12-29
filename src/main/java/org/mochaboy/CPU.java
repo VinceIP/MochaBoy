@@ -67,9 +67,6 @@ public class CPU extends Thread {
                 didPostBoot = true;
             }
 
-            if(pc > 0x080){
-                System.out.println("");
-            }
 
             //String interrupts = interrupt.getInterruptsAsString();
 //            if(pc > 0x0100 && !interrupts.contains("vblank")){
@@ -78,17 +75,17 @@ public class CPU extends Thread {
 //                System.out.printf("\nPC: %04X - vblank enabled", pc);
 //            }
 
-            if ((pc >= 0x2ED && pc <= 0x2F0)) {
-                printDebugLog(opcode);
-                System.out.println("IME: " + isIME());
-                System.out.printf("IF: %02X\n", memory.readByte(map.get("IF")));
-                System.out.printf("IE: %02X\n", memory.readByte(map.get("IE")));
-                int ly = memory.readByte(map.get("LY"));
-                System.out.println("LY: " + ly);
-                if (ly == 144) {
-                    System.out.println("vblank: YES");
-                }
-            }
+//            if ((pc >= 0x2ED && pc <= 0x2F0)) {
+//                printDebugLog(opcode);
+//                System.out.println("IME: " + isIME());
+//                System.out.printf("IF: %02X\n", memory.readByte(map.get("IF")));
+//                System.out.printf("IE: %02X\n", memory.readByte(map.get("IE")));
+//                int ly = memory.readByte(map.get("LY"));
+//                System.out.println("LY: " + ly);
+//                if (ly == 144) {
+//                    System.out.println("vblank: YES");
+//                }
+//            }
 
 
             int cycles = 0;

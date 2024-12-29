@@ -44,24 +44,24 @@ public class PPU {
         setPpuMode(PPU_MODE.OAM_SCAN);
         lcdEnabled = true;
         Map<String, Integer> map = memory.getMemoryMap();
-        memory.writeByte(map.get("LY"), 0x00);
-        memory.writeByte(map.get("LCDC"), 0x91); //screen on, bg on
-        memory.writeByte(map.get("BGP"), 0xFC); //bg palette
-        memory.writeByte(map.get("OBP0"), 0xFF); //Sprite palette 0
-        memory.writeByte(map.get("OBP1"), 0xFF); //Sprite palette 1
+        memory.writeByteUnrestricted(map.get("LY"), 0x00);
+        memory.writeByteUnrestricted(map.get("LCDC"), 0x91); //screen on, bg on
+        memory.writeByteUnrestricted(map.get("BGP"), 0xFC); //bg palette
+        memory.writeByteUnrestricted(map.get("OBP0"), 0xFF); //Sprite palette 0
+        memory.writeByteUnrestricted(map.get("OBP1"), 0xFF); //Sprite palette 1
         //loadTestTiles();
     }
 
     public void step(int cycles) {
-        int lcdc = memory.readByte(memoryMap.get("LCDC"));
+        int lcdc = memory.readByteUnrestricted(memoryMap.get("LCDC"));
         lcdEnabled = (lcdc & 0x80) != 0;
 //        if (!isLcdEnabled()) {
-//            memory.writeByte(memoryMap.get("LY"), 0x00);
+//            memory.writeByteUnrestricted(memoryMap.get("LY"), 0x00);
 //            setPpuMode(PPU_MODE.HBLANK);
 //            return;
 //        }
         int lyAddress = memory.getMemoryMap().get("LY");
-        int ly = memory.readByte(lyAddress);
+        int ly = memory.readByteUnrestricted(lyAddress);
 
         cycleCounter += cycles;
 
@@ -100,11 +100,11 @@ public class PPU {
     }
 
     public void drawScanline() {
-        int lcdc = memory.readByte(memoryMap.get("LCDC"));
-        int scx = memory.readByte(memoryMap.get("SCX"));
-        int scy = memory.readByte(memoryMap.get("SCY"));
-        int ly = memory.readByte(memoryMap.get("LY"));
-        int bgp = memory.readByte(memoryMap.get("BGP"));
+        int lcdc = memory.readByteUnrestricted(memoryMap.get("LCDC"));
+        int scx = memory.readByteUnrestricted(memoryMap.get("SCX"));
+        int scy = memory.readByteUnrestricted(memoryMap.get("SCY"));
+        int ly = memory.readByteUnrestricted(memoryMap.get("LY"));
+        int bgp = memory.readByteUnrestricted(memoryMap.get("BGP"));
 
         //if (!lcdEnabled || (lcdc & 0x01) == 0) return;
 
@@ -122,13 +122,13 @@ public class PPU {
         for (int pixel = 0; pixel < 160; pixel++) {
             int tileCol = (scx + pixel) / 8;
             int tileAddress = tileMapBase + (tileRow * 32) + tileCol;
-            int tileNum = memory.readByte(tileAddress);
+            int tileNum = memory.readByteUnrestricted(tileAddress);
             if (tileDataBase == 0x8800) tileNum = (byte) tileNum; //Sign data if in 8800 method
             int tileDataAddress = tileDataBase + (tileNum * 16);
 
             int tileY = (scy + ly) % 8;
-            int tileData1 = memory.readByte(tileDataAddress + (tileY * 2));
-            int tileData2 = memory.readByte(tileDataAddress + (tileY * 2) + 1);
+            int tileData1 = memory.readByteUnrestricted(tileDataAddress + (tileY * 2));
+            int tileData2 = memory.readByteUnrestricted(tileDataAddress + (tileY * 2) + 1);
 
             int tileX = (scx + pixel) % 8;
 
@@ -165,14 +165,14 @@ public class PPU {
     public int incrementLY() {
         Map<String, Integer> map = memory.getMemoryMap();
         int LYAddress = map.get("LY");
-        int LY = memory.readByte(LYAddress);
+        int LY = memory.readByteUnrestricted(LYAddress);
         //LY = (LY + 1) % 154;
         LY++;
         if (LY == 154) {
             LY = 0;
             setPpuMode(PPU_MODE.OAM_SCAN);
         }
-        memory.writeByte(LYAddress, LY);
+        memory.writeByteUnrestricted(LYAddress, LY);
         checkLyCoincidence();
         return LY;
     }
@@ -183,7 +183,7 @@ public class PPU {
         for (int row = 0; row < 96; row++) { // 96 rows of 16 bytes each = 1.5KB (0x8000-0x97FF)
             for (int col = 0; col < 16; col++) {
                 int address = 0x8000 + (row * 16) + col;
-                int value = memory.readByte(address);
+                int value = memory.readByteUnrestricted(address);
 
                 // Print address for the first byte of each row
                 if (col == 0) {
@@ -198,7 +198,7 @@ public class PPU {
         for (int row = 0; row < 32; row++) {
             for (int col = 0; col < 32; col++) {
                 int address = 0x9800 + (row * 32) + col;
-                int value = memory.readByte(address);
+                int value = memory.readByteUnrestricted(address);
 
                 // Print address for the first byte of each row
                 if (col == 0) {
@@ -220,24 +220,25 @@ public class PPU {
 
     public void setPpuMode(PPU_MODE ppuMode) {
         this.ppuMode = ppuMode;
-//        switch (ppuMode) {
-//            case HBLANK:
-//                memory.setVramBlocked(false);
-//                memory.setOamBlocked(false);
-//                break;
-//            case VBLANK:
-//                memory.setVramBlocked(false);
-//                memory.setOamBlocked(false);
-//                interrupt.setInterrupt(Interrupt.INTERRUPT.VBLANK);
-//            case OAM_SCAN:
-//                memory.setVramBlocked(false);
-//                memory.setOamBlocked(true);
-//                break;
-//            case DRAWING:
-//                memory.setVramBlocked(true);
-//                memory.setOamBlocked(true);
-//                break;
-//        }
+        switch (ppuMode) {
+            case HBLANK:
+                memory.setVramBlocked(false);
+                memory.setOamBlocked(false);
+                break;
+            case VBLANK:
+                memory.setVramBlocked(false);
+                memory.setOamBlocked(false);
+                interrupt.setInterrupt(Interrupt.INTERRUPT.VBLANK);
+                display.setFrameReady(true);
+            case OAM_SCAN:
+                memory.setVramBlocked(false);
+                memory.setOamBlocked(true);
+                break;
+            case DRAWING:
+                memory.setVramBlocked(true);
+                memory.setOamBlocked(true);
+                break;
+        }
         updateStatRegister();
         checkStatInterrupts();
     }
@@ -245,7 +246,7 @@ public class PPU {
     private void updateStatRegister() {
         Map<String, Integer> map = memory.getMemoryMap();
         int statAddress = map.get("STAT");
-        int stat = memory.readByte(statAddress);
+        int stat = memory.readByteUnrestricted(statAddress);
 
         //Keep bits 7-2, get bits 1-0 from ppuMode enum
         stat = (stat & 0xFC) | ppuMode.ordinal();
@@ -254,7 +255,7 @@ public class PPU {
         //Isolates bit 2 and clears it before combining with the boolean status
         stat = (stat & ~0x04) | (lycEqualsLy ? 0x04 : 0x00);
 
-        memory.writeByte(statAddress, stat);
+        memory.writeByteUnrestricted(statAddress, stat);
     }
 
     private void checkStatInterrupts() {
@@ -263,7 +264,7 @@ public class PPU {
         lastStatInterruptLine = statInterruptLine;
         statInterruptLine = false;
 
-        int stat = memory.readByte(memoryMap.get("STAT"));
+        int stat = memory.readByteUnrestricted(memoryMap.get("STAT"));
 
         //Check interrupt sources
         if ((stat & 0x40) != 0 && lycEqualsLy) {
@@ -286,8 +287,8 @@ public class PPU {
     }
 
     private void checkLyCoincidence() {
-        int ly = memory.readByte(memoryMap.get("LY"));
-        int lyc = memory.readByte(memoryMap.get("LYC"));
+        int ly = memory.readByteUnrestricted(memoryMap.get("LY"));
+        int lyc = memory.readByteUnrestricted(memoryMap.get("LYC"));
         lycEqualsLy = (ly == lyc);
         updateStatRegister();
         checkStatInterrupts();
@@ -299,7 +300,7 @@ public class PPU {
     }
 
     private boolean isLcdEnabled() {
-        int lcdc = memory.readByte(memoryMap.get("LCDC"));
+        int lcdc = memory.readByteUnrestricted(memoryMap.get("LCDC"));
         return ((lcdc >> 7) & 0x1) == 1;
     }
 }

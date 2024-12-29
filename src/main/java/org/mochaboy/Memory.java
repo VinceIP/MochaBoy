@@ -38,13 +38,13 @@ public class Memory {
         address &= 0xFFFF;
 
         //If reading from OAM
-//        if (address >= map.get("OAM_START") && address <= map.get("OAM_END")) {
-//            if (oamBlocked) return 0xFF;
-//        }
-//
-//        if(address >= map.get("VRAM_START") && address <= map.get("VRAM_END")){
-//            if(vramBlocked) return 0xFF;
-//        }
+        if (address >= map.get("OAM_START") && address <= map.get("OAM_END")) {
+            if (oamBlocked) return 0xFF;
+        }
+
+        if(address >= map.get("VRAM_START") && address <= map.get("VRAM_END")){
+            if(vramBlocked) return 0xFF;
+        }
 
         if (bootRomEnabled && address <= 0x00FF) {
             return bootRom[address] & 0xFF;
@@ -55,6 +55,10 @@ public class Memory {
         if (address == 0xFF02) {
             return 0x7E;
         }
+        return memory[address] & 0xFF;
+    }
+
+    public int readByteUnrestricted(int address){
         return memory[address] & 0xFF;
     }
 
@@ -80,13 +84,13 @@ public class Memory {
 
         //Prohibited usage
         //Look into OAM corruption bug when writes are requested here
-//        if (address >= map.get("OAM_START") && address <= map.get("OAM_END")) {
-//            if (oamBlocked) return;
-//        }
-//
-//        if(address >= map.get("VRAM_START") && address <= map.get("VRAM_END")){
-//            if(vramBlocked) return;
-//        }
+        if (address >= map.get("OAM_START") && address <= map.get("OAM_END")) {
+            if (oamBlocked) return;
+        }
+
+        if(address >= map.get("VRAM_START") && address <= map.get("VRAM_END")){
+            if(vramBlocked) return;
+        }
 
         if (address == 0xFF50) {
             bootRomEnabled = false;
@@ -133,6 +137,12 @@ public class Memory {
         }
 
         // Normal memory write for all other addresses
+        memory[address] = (byte) value;
+    }
+
+    public void writeByteUnrestricted(int address, int value){
+        value = value & 0xFF;
+        address = address & 0xFFFF;
         memory[address] = (byte) value;
     }
 
