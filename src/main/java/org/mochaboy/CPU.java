@@ -1,6 +1,8 @@
 package org.mochaboy;
 
 import org.mochaboy.opcode.*;
+import org.mochaboy.opcode.operations.MicroOperation;
+import org.mochaboy.opcode.operations.ReadImmediate8bit;
 import org.mochaboy.registers.Interrupt;
 import org.mochaboy.registers.Registers;
 import org.mochaboy.registers.Timer;
@@ -16,9 +18,12 @@ public class CPU extends Thread {
     private Stack stack;
     private Interrupt interrupt;
     private Input input;
+    private Opcode currentOpcodeObject;
     private OpcodeLoader opcodeLoader;
+    private OpcodeBuilder opcodeBuilder;
     private OpcodeWrapper opcodeWrapper;
     private OpcodeHandler opcodeHandler;
+    private State state;
     private long tStateCounter;
     private boolean IME;
     private boolean pendingInterruptSwitch;
@@ -27,7 +32,9 @@ public class CPU extends Thread {
     private boolean stopMode;
     private boolean didJump;
     private boolean running;
+    private boolean fetchedCb;
     private int totalCycles;
+    private int opcode;
     private static final int CYCLES_PER_FRAME = 70224;
     private static final double NS_PER_CYCLE = 238.4;
     private static final double FRAME_TIME_MS = 1000.0 / 59.7275;
@@ -47,9 +54,11 @@ public class CPU extends Thread {
         opcodeLoader = new OpcodeLoader();
         opcodeWrapper = opcodeLoader.getOpcodeWrapper();
         opcodeHandler = new OpcodeHandler(opcodeWrapper);
+        opcodeBuilder = new OpcodeBuilder(opcodeWrapper);
         map = memory.getMemoryMap();
     }
 
+    /*
     @Override
     public void run() {
         running = true;
@@ -106,9 +115,6 @@ public class CPU extends Thread {
 
             }
 
-            ppu.step(cycles);
-            totalCycles += cycles;
-
 
             //Update timers
             if (elapsedEmulatedTimeNs - lastDivUpdateCheck >= Timer.DIV_INC_TIME_NS) {
@@ -161,6 +167,7 @@ public class CPU extends Thread {
                 }
             }
 
+
             //CPU cycle timing
             if (totalCycles >= CYCLES_PER_FRAME) {
                 long frameEndTime = System.nanoTime();
@@ -176,29 +183,66 @@ public class CPU extends Thread {
                 totalCycles -= CYCLES_PER_FRAME;
                 frameStartTime = System.nanoTime();
             }
+
+            ppu.step(cycles);
+            totalCycles += cycles;
         }
 
+    }
+     */
+
+    public void step() {
+        switch (state) {
+            case FETCH:
+                fetch();
+                if (opcode != 0xCB) state = State.DECODE;
+                else fetchedCb = true;
+                break;
+            case DECODE:
+                currentOpcodeObject = opcodeBuilder.build(opcode, fetchedCb);
+                state = State.EXECUTE;
+                break;
+            case EXECUTE:
+                if (currentOpcodeObject.hasOperationsRemaining()) { //If this opcode still has work to do
+                    boolean done = false;
+                    while (!done) { //Make sure we continuously execute any operations that don't consume cycles
+                        currentOpcodeObject.execute(this, memory);
+                        MicroOperation nextOp = currentOpcodeObject.getMicroOps().peek();
+                        if (nextOp == null) {
+                            done = true;
+                            currentOpcodeObject.setOperationsRemaining(true);
+                        } else if (nextOp.getCycles() != 0) {
+                            done = true;
+                        }
+                    }
+                } else state = State.FETCH;
+                break;
+        }
     }
 
     public void stopCPU() {
         running = false;
     }
 
-    public OpcodeInfo fetch() {
-        int opcode = memory.readByte(registers.getPC()) & 0xFF;
-        OpcodeInfo opcodeInfo;
-        String hexString;
-        if (opcode == 0xCB) {
-            //getRegisters().incrementPC();
-            opcode = memory.readByte(registers.getPC() + 1) & 0xFF;
-            hexString = String.format("0x%02X", opcode);
-            opcodeInfo = opcodeWrapper.getCbprefixed().get(hexString);
-        } else {
-            hexString = String.format("0x%02X", opcode);
-            opcodeInfo = opcodeWrapper.getUnprefixed().get(hexString);
-        }
-        return opcodeInfo;
+    private void fetch() {
+        new ReadImmediate8bit(this::setOpcode).execute(this, memory);
     }
+
+//    public OpcodeInfo fetch() {
+//        int opcode = memory.readByte(registers.getPC()) & 0xFF;
+//        OpcodeInfo opcodeInfo;
+//        String hexString;
+//        if (opcode == 0xCB) {
+//            //getRegisters().incrementPC();
+//            opcode = memory.readByte(registers.getPC() + 1) & 0xFF;
+//            hexString = String.format("0x%02X", opcode);
+//            opcodeInfo = opcodeWrapper.getCbprefixed().get(hexString);
+//        } else {
+//            hexString = String.format("0x%02X", opcode);
+//            opcodeInfo = opcodeWrapper.getUnprefixed().get(hexString);
+//        }
+//        return opcodeInfo;
+//    }
 
     public int execute(OpcodeInfo opcodeInfo) {
         if (opcodeInfo == null) return 0;
@@ -213,6 +257,12 @@ public class CPU extends Thread {
         reg.setDE(0x00D8);
         reg.setHL(0x014D);
         reg.setSP(0xFFFE);
+    }
+
+    public enum State {
+        FETCH,
+        DECODE,
+        EXECUTE
     }
 
     public Memory getMemory() {
@@ -292,10 +342,6 @@ public class CPU extends Thread {
         this.halt = halt;
     }
 
-    public long getElapsedEmulatedTimeNs() {
-        return elapsedEmulatedTimeNs;
-    }
-
     public void printHRAM() {
         System.out.println("-------------------- HRAM (0xFF80 - 0xFFFE) --------------------");
         for (int row = 0xFF80; row < 0x10000; row += 16) {
@@ -357,6 +403,10 @@ public class CPU extends Thread {
 
         System.out.printf("PC=%04X OPCODE=%02X (%s) %s%s\n",
                 pc, rawOpcode, opcode.getMnemonic(), sb.toString(), extra);
+    }
+
+    private void setOpcode(int opcode) {
+        this.opcode = opcode;
     }
 
 
