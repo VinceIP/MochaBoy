@@ -2,22 +2,28 @@ package org.mochaboy.opcode.operations;
 
 import org.mochaboy.CPU;
 import org.mochaboy.Memory;
-import org.mochaboy.opcode.Opcode;
 
 import java.util.function.Consumer;
 
 public class ReadImmediate8bit implements MicroOperation {
     private Consumer<Integer> consumer;
     private int result;
+    private boolean addHRamOffset = false;
 
     public ReadImmediate8bit(Consumer<Integer> consumer) {
         this.consumer = consumer;
+    }
+
+    public ReadImmediate8bit(Consumer<Integer> consumer, boolean addHRamOffset) {
+        this.consumer = consumer;
+        this.addHRamOffset = addHRamOffset;
     }
 
     @Override
     public MicroOperation execute(CPU cpu, Memory memory) {
         result = memory.readByte(cpu.getRegisters().getPC()) & 0xFF;
         cpu.getRegisters().incrementPC();
+        if (addHRamOffset) result |= 0xFF00;
         consumer.accept(result);
         return this;
     }
@@ -31,4 +37,5 @@ public class ReadImmediate8bit implements MicroOperation {
     public int getResult() {
         return result;
     }
+
 }

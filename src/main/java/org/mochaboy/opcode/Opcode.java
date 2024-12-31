@@ -10,9 +10,12 @@ public class Opcode {
     private final LinkedList<MicroOperation> microOps;
     private String destinationRegister;
     private String sourceRegister;
+    private String cc;
     private int operand1;
     private int operand2;
     private int operand3;
+    private int incrementOperand = 0;
+    private int decrementOperand = 0;
     private boolean operationsRemaining;
 
 
@@ -81,5 +84,29 @@ public class Opcode {
 
     public void setSourceRegister(String sourceRegister) {
         this.sourceRegister = sourceRegister;
+    }
+
+    public String getCc() {
+        return cc;
+    }
+
+    public void setCc(String cc) {
+        this.cc = cc;
+    }
+
+    public int getIncrementOperand() {
+        return incrementOperand;
+    }
+
+    public void setIncrementOperand(int incrementOperand) {
+        this.incrementOperand = incrementOperand;
+    }
+
+    public int getDecrementOperand() {
+        return decrementOperand;
+    }
+
+    public void setDecrementOperand(int decrementOperand) {
+        this.decrementOperand = decrementOperand;
     }
 }

@@ -6,6 +6,8 @@ public class Operand {
     private boolean immediate;
     private boolean increment;
     private boolean decrement;
+    private boolean register;
+    private boolean memory;
 
     public Operand() {
     }
@@ -48,5 +50,21 @@ public class Operand {
 
     public void setDecrement(boolean decrement) {
         this.decrement = decrement;
+    }
+
+    public boolean isRegister() {
+        return register;
+    }
+
+    public void setRegister(boolean register) {
+        this.register = register;
+    }
+
+    public boolean isMemory() {
+        return memory;
+    }
+
+    public void setMemory(boolean memory) {
+        this.memory = memory;
     }
 }
