@@ -25,6 +25,7 @@ public class CPU extends Thread {
     private OpcodeHandler opcodeHandler;
     private State state;
     private long tStateCounter;
+    private boolean built = false;
     private boolean IME;
     private boolean pendingInterruptSwitch;
     private boolean halt;
@@ -58,7 +59,6 @@ public class CPU extends Thread {
         map = memory.getMemoryMap();
     }
 
-    /*
     @Override
     public void run() {
         running = true;
@@ -67,7 +67,15 @@ public class CPU extends Thread {
         long frameStartTime = System.nanoTime();
         int divCount = 0;
         boolean didPostBoot = false;
+        state = State.FETCH;
         while (running) {
+            step();
+            try {
+                sleep(100);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+            /*
             OpcodeInfo opcode = fetch();
             int pc = registers.getPC();
 
@@ -75,26 +83,6 @@ public class CPU extends Thread {
                 postBootInit();
                 didPostBoot = true;
             }
-
-
-            //String interrupts = interrupt.getInterruptsAsString();
-//            if(pc > 0x0100 && !interrupts.contains("vblank")){
-//                System.out.printf("\nPC: %04X - vblank disabled", pc);
-//            } else if (pc > 0x100){
-//                System.out.printf("\nPC: %04X - vblank enabled", pc);
-//            }
-
-//            if ((pc >= 0x2ED && pc <= 0x2F0)) {
-//                printDebugLog(opcode);
-//                System.out.println("IME: " + isIME());
-//                System.out.printf("IF: %02X\n", memory.readByte(map.get("IF")));
-//                System.out.printf("IE: %02X\n", memory.readByte(map.get("IE")));
-//                int ly = memory.readByte(map.get("LY"));
-//                System.out.println("LY: " + ly);
-//                if (ly == 144) {
-//                    System.out.println("vblank: YES");
-//                }
-//            }
 
 
             int cycles = 0;
@@ -168,7 +156,7 @@ public class CPU extends Thread {
             }
 
 
-            //CPU cycle timing
+            CPU cycle timing
             if (totalCycles >= CYCLES_PER_FRAME) {
                 long frameEndTime = System.nanoTime();
                 double frameTimeMs = (frameEndTime - frameStartTime) / 1_000_000.0;
@@ -187,22 +175,23 @@ public class CPU extends Thread {
             ppu.step(cycles);
             totalCycles += cycles;
         }
-
+*/
+        }
     }
-     */
+
 
     public void step() {
         switch (state) {
             case FETCH:
                 fetch();
-                if (opcode != 0xCB) state = State.DECODE;
+                if (opcode != 0xCB) state = State.DECODE_AND_EXECUTE;
                 else fetchedCb = true;
                 break;
-            case DECODE:
-                currentOpcodeObject = opcodeBuilder.build(opcode, fetchedCb);
-                state = State.EXECUTE;
-                break;
-            case EXECUTE:
+            case DECODE_AND_EXECUTE:
+                if (!built) {
+                    currentOpcodeObject = opcodeBuilder.build(opcode, fetchedCb);
+                    built = true;
+                }
                 if (currentOpcodeObject.hasOperationsRemaining()) { //If this opcode still has work to do
                     boolean done = false;
                     while (!done) { //Make sure we continuously execute any operations that don't consume cycles
@@ -210,12 +199,14 @@ public class CPU extends Thread {
                         MicroOperation nextOp = currentOpcodeObject.getMicroOps().peek();
                         if (nextOp == null) {
                             done = true;
-                            currentOpcodeObject.setOperationsRemaining(true);
                         } else if (nextOp.getCycles() != 0) {
                             done = true;
                         }
                     }
-                } else state = State.FETCH;
+                } else {
+                    built = false;
+                    state = State.FETCH;
+                }
                 break;
         }
     }
@@ -261,8 +252,7 @@ public class CPU extends Thread {
 
     public enum State {
         FETCH,
-        DECODE,
-        EXECUTE
+        DECODE_AND_EXECUTE
     }
 
     public Memory getMemory() {

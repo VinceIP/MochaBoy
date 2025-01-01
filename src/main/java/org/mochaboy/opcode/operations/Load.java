@@ -2,24 +2,37 @@ package org.mochaboy.opcode.operations;
 
 import org.mochaboy.CPU;
 import org.mochaboy.Memory;
-
-import java.util.function.Consumer;
-import java.util.function.Supplier;
+import org.mochaboy.opcode.Opcode;
+import org.mochaboy.registers.Registers;
 
 public class Load implements MicroOperation {
-    private Supplier<Integer> source;
-    private Consumer<Integer> destination;
-    private int result;
+    private final Opcode opcode;
 
-    public Load(Supplier<Integer> source, Consumer<Integer> destination) {
-        this.source = source;
-        this.destination = destination;
+    public Load(Opcode opcode) {
+        this.opcode = opcode;
     }
 
     @Override
     public MicroOperation execute(CPU cpu, Memory memory) {
-        result = source.get(); //Get val from source
-        destination.accept(result); //Write val to destination
+        Registers r = cpu.getRegisters();
+        String ss = opcode.getSourceOperandString();
+        String ds = opcode.getDestinationOperandString();
+        int source;
+        //If a register string is set here
+        if (Registers.isValidRegister(cpu, ss) && opcode.getDestinationOperand().isImmediate()) {
+            source = r.getByName(ss); //Pull the source value from a register
+        } else {
+            //If ss is a register but not immediate, or explicitly "a8", "n8", "n16", we expect a source value
+            source = opcode.getSourceValue();
+        }
+
+        if (Registers.isValidRegister(cpu, ds) && opcode.getSourceOperand().isImmediate()) { //If destination is a register
+            source = (ds.length() > 1) ? source & 0xFFFF : source & 0xFF; //Mask for 16 or 8 bits
+            r.setByName(ds, source);
+        } else {
+            memory.writeByte(opcode.getDestinationValue(), source & 0xFF);
+        }
+
         return this;
     }
 
@@ -30,6 +43,6 @@ public class Load implements MicroOperation {
 
     @Override
     public int getResult() {
-        return result;
+        return 0;
     }
 }

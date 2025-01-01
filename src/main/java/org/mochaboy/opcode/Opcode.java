@@ -11,9 +11,15 @@ public class Opcode {
     private String destinationRegister;
     private String sourceRegister;
     private String cc;
-    private int operand1;
-    private int operand2;
-    private int operand3;
+    private String destinationOperandString;
+    private String sourceOperandString;
+    private String extraOperandString;
+    private Operand destinationOperand;
+    private Operand sourceOperand;
+    private Operand extraOperand;
+    private int sourceValue;
+    private int destinationValue;
+    private int extraValue;
     private int incrementOperand = 0;
     private int decrementOperand = 0;
     private boolean operationsRemaining;
@@ -34,28 +40,52 @@ public class Opcode {
         microOps.add(microOperation);
     }
 
-    public int getOperand1() {
-        return operand1;
+    public String getDestinationOperandString() {
+        return destinationOperandString;
     }
 
-    public void setOperand1(int operand1) {
-        this.operand1 = operand1;
+    public void setDestinationOperandString(String destinationOperandString) {
+        this.destinationOperandString = destinationOperandString;
     }
 
-    public int getOperand2() {
-        return operand2;
+    public String getSourceOperandString() {
+        return sourceOperandString;
     }
 
-    public void setOperand2(int operand2) {
-        this.operand2 = operand2;
+    public void setSourceOperandString(String sourceOperandString) {
+        this.sourceOperandString = sourceOperandString;
     }
 
-    public int getOperand3() {
-        return operand3;
+    public String getExtraOperandString() {
+        return extraOperandString;
     }
 
-    public void setOperand3(int operand3) {
-        this.operand3 = operand3;
+    public void setExtraOperandString(String extraOperandString) {
+        this.extraOperandString = extraOperandString;
+    }
+
+    public int getSourceValue() {
+        return sourceValue;
+    }
+
+    public void setSourceValue(int sourceValue) {
+        this.sourceValue = sourceValue;
+    }
+
+    public int getDestinationValue() {
+        return destinationValue;
+    }
+
+    public void setDestinationValue(int destinationValue) {
+        this.destinationValue = destinationValue;
+    }
+
+    public int getExtraValue() {
+        return extraValue;
+    }
+
+    public void setExtraValue(int extraValue) {
+        this.extraValue = extraValue;
     }
 
     public LinkedList<MicroOperation> getMicroOps() {
@@ -70,20 +100,28 @@ public class Opcode {
         operationsRemaining = val;
     }
 
-    public String getDestinationRegister() {
-        return destinationRegister;
+    public Operand getDestinationOperand() {
+        return destinationOperand;
     }
 
-    public void setDestinationRegister(String destinationRegister) {
-        this.destinationRegister = destinationRegister;
+    public void setDestinationOperand(Operand destinationOperand) {
+        this.destinationOperand = destinationOperand;
     }
 
-    public String getSourceRegister() {
-        return sourceRegister;
+    public Operand getSourceOperand() {
+        return sourceOperand;
     }
 
-    public void setSourceRegister(String sourceRegister) {
-        this.sourceRegister = sourceRegister;
+    public void setSourceOperand(Operand sourceOperand) {
+        this.sourceOperand = sourceOperand;
+    }
+
+    public Operand getExtraOperand() {
+        return extraOperand;
+    }
+
+    public void setExtraOperand(Operand extraOperand) {
+        this.extraOperand = extraOperand;
     }
 
     public String getCc() {

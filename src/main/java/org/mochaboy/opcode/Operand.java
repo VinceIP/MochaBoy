@@ -8,6 +8,7 @@ public class Operand {
     private boolean decrement;
     private boolean register;
     private boolean memory;
+    private int value;
 
     public Operand() {
     }
@@ -66,5 +67,13 @@ public class Operand {
 
     public void setMemory(boolean memory) {
         this.memory = memory;
+    }
+
+    public int getValue() {
+        return value;
+    }
+
+    public void setValue(int value) {
+        this.value = value;
     }
 }

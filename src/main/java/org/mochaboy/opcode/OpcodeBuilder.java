@@ -53,21 +53,24 @@ public class OpcodeBuilder {
     }
 
     private void handleDestinationOperand(Opcode opcodeObject, Operand d) {
+        opcodeObject.setDestinationOperandString(d.getName());
+        opcodeObject.setDestinationOperand(d);
         switch (d.getName()) {
-            //TODO: handle post inc/dec
             case "a8":
                 //Only occurs in LDH
                 opcodeObject.addOp(
-                        new ReadImmediate8bit(opcodeObject::setOperand1, true) //Adds offset of FF00
+                        new ReadImmediate8bit(opcodeObject::setDestinationValue, true) //Adds offset of FF00
                 );
                 break;
             case "a16":
                 //This is an address
-                opcodeObject.addOp(new ReadImmediate8bit(opcodeObject::setOperand1));
-                opcodeObject.addOp(new ReadImmediate8bit(opcodeObject::setOperand2));
+                //2 cycles to read 16-bit address
+                opcodeObject.addOp(new ReadImmediate8bit(opcodeObject::setDestinationValue));
+                opcodeObject.addOp(new ReadImmediate8bit(opcodeObject::setSourceValue));
                 opcodeObject.addOp(
                         new MergeOperands(
-                                opcodeObject::getOperand1, opcodeObject::getOperand2, opcodeObject::setOperand1)
+                                opcodeObject::getDestinationValue, opcodeObject::getSourceValue,
+                                opcodeObject::setSourceValue)
                 );
                 break;
             case "A":
@@ -89,63 +92,64 @@ public class OpcodeBuilder {
             case "PC":
                 //If not an immediate value, read the address held in a 16-bit register
                 if (!d.isImmediate()) {
-                    opcodeObject.addOp(new ReadRegister16Bit(opcodeObject::setOperand1, d.getName()));
-                } else opcodeObject.setDestinationRegister(d.getName()); //Otherwise, set a destination register
-
+                    opcodeObject.addOp(new ReadRegister16Bit(opcodeObject::setDestinationValue, d.getName()));
+                } //Otherwise, do nothing(?)
                 break;
             //RES - set bit u3 to 0 in r8 or [HL], so make this operand2 (source)
             //BIT
             case "0", "1", "2", "3", "4", "5", "6", "7":
-                opcodeObject.setOperand2(Integer.parseInt(d.getName()));
+                //opcodeObject.setSource(Integer.parseInt(d.getName()));
                 break;
             case "Z":
             case "NZ":
             case "NC":
-                opcodeObject.setCc(d.getName());
+                opcodeObject.setCc(d.getName()); //Other flag conditions
                 break;
         }
     }
 
     private void handleSourceOperand(Opcode opcodeObject, Operand s) {
+        opcodeObject.setSourceOperandString(s.getName());
+        opcodeObject.setSourceOperand(s);
         switch (s.getName()) {
             case "n8":
                 opcodeObject.addOp(
-                        new ReadImmediate8bit(opcodeObject::setOperand2)
+                        new ReadImmediate8bit(opcodeObject::setSourceValue)
                 );
                 break;
 
             case "n16":
                 //Read address, then merge, set as operand 2
                 opcodeObject.addOp(
-                        new ReadImmediate8bit(opcodeObject::setOperand2)
+                        new ReadImmediate8bit(opcodeObject::setSourceValue)
                 );
                 opcodeObject.addOp(
-                        new ReadImmediate8bit(opcodeObject::setOperand3)
+                        new ReadImmediate8bit(opcodeObject::setExtraValue)
                 );
                 opcodeObject.addOp(
                         new MergeOperands(
-                                opcodeObject::getOperand2, opcodeObject::getOperand3, opcodeObject::setOperand2)
+                                opcodeObject::getSourceValue, opcodeObject::getExtraValue, opcodeObject::setSourceValue)
                 );
                 break;
 
             case "a16":
                 //Same as above, but a16 only appears in JUMP/CALL, so set it as operand 1
                 opcodeObject.addOp(
-                        new ReadImmediate8bit(opcodeObject::setOperand2)
+                        new ReadImmediate8bit(opcodeObject::setDestinationValue)
                 );
                 opcodeObject.addOp(
-                        new ReadImmediate8bit(opcodeObject::setOperand3)
+                        new ReadImmediate8bit(opcodeObject::setSourceValue)
                 );
                 opcodeObject.addOp(
                         new MergeOperands(
-                                opcodeObject::getOperand2, opcodeObject::getOperand3, opcodeObject::setOperand1)
+                                opcodeObject::getDestinationValue, opcodeObject::getSourceValue, opcodeObject::setDestinationValue)
                 );
                 break;
 
             case "a8":
                 //Only occurs in LDH
                 opcodeObject.addOp(
-                        new ReadImmediate8bit(opcodeObject::setOperand2, true) //Adds offset of FF00
+                        new ReadImmediate8bit(opcodeObject::setSourceValue, true) //Adds offset of FF00
                 );
                 break;
             case "A":
@@ -166,20 +170,24 @@ public class OpcodeBuilder {
             case "PC":
                 //If not an immediate value, read the address held in a 16-bit register
                 if (!s.isImmediate()) {
-                    opcodeObject.addOp(new ReadRegister16Bit(opcodeObject::setOperand2, s.getName()));
-                } else opcodeObject.setDestinationRegister(s.getName()); //Otherwise, set a destination register
+                    opcodeObject.addOp(new ReadRegister16Bit(opcodeObject::setSourceValue, s.getName()));
+                }
                 break;
         }
     }
 
     private void buildOpsFromMnemonics(Opcode opcodeObject, OpcodeInfo opcodeInfo) {
         String m = opcodeInfo.getMnemonic();
-        switch (m){
+        switch (m) {
             //LD
-            case "LD":
+            case "LD", "LDH":
                 opcodeObject.addOp(
-                        new Load(opcodeObject::getOperand2, opcodeObject::setOperand1)
+                        new Load(opcodeObject)
                 );
+                break;
+            default:
+                System.out.println("Mnemonic not implemented: " + m);
+
         }
     }
 

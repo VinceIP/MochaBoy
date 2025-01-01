@@ -1,5 +1,7 @@
 package org.mochaboy.registers;
 
+import org.mochaboy.CPU;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.BiConsumer;
@@ -210,6 +212,10 @@ public class Registers {
 
     public void setByName(String name, int value) {
         registerSettersMap.get(name).accept(this, value);
+    }
+
+    public static boolean isValidRegister(CPU cpu, String s){
+        return cpu.getRegisters().registerGettersMap.get(s) != null;
     }
 
 }
