@@ -1,11 +1,14 @@
 package org.mochaboy.opcode;
 
+import org.mochaboy.CPU;
 import org.mochaboy.opcode.operations.*;
 
 public class OpcodeBuilder {
-    OpcodeWrapper opcodeWrapper;
+    private final CPU cpu;
+    private final OpcodeWrapper opcodeWrapper;
 
-    public OpcodeBuilder(OpcodeWrapper opcodeWrapper) {
+    public OpcodeBuilder(CPU cpu, OpcodeWrapper opcodeWrapper) {
+        this.cpu = cpu;
         this.opcodeWrapper = opcodeWrapper;
     }
 
@@ -19,6 +22,7 @@ public class OpcodeBuilder {
         opcodeObject.setOpcodeInfo(opcodeInfo);
         buildMicroOpsFromOperands(opcodeObject, opcodeInfo);
         buildOpsFromMnemonics(opcodeObject, opcodeInfo);
+        handlePostIncDec(opcodeObject, opcodeInfo);
         opcodeObject.setCyclesConsumed(1 + calculateCycles(opcodeObject));
         return opcodeObject;
     }
@@ -69,7 +73,7 @@ public class OpcodeBuilder {
                 opcodeObject.addOp(new ReadImmediate8bit(opcodeObject::setDestinationValue));
                 opcodeObject.addOp(new ReadImmediate8bit(opcodeObject::setSourceValue));
                 opcodeObject.addOp(
-                        new MergeOperands(
+                        new FlipBytes(
                                 opcodeObject::getDestinationValue, opcodeObject::getSourceValue,
                                 opcodeObject::setSourceValue)
                 );
@@ -94,7 +98,16 @@ public class OpcodeBuilder {
                 //If not an immediate value, read the address held in a 16-bit register
                 if (!d.isImmediate()) {
                     opcodeObject.addOp(new ReadRegister16Bit(opcodeObject::setDestinationValue, d.getName()));
-                } //Otherwise, do nothing(?)
+                } else {
+                    //This is a register. Set opcodeObject.destinationValue to the value held in that register
+                    if (d.getName().length() > 1) {
+                        new ReadRegister16Bit(opcodeObject::setDestinationValue, d.getName())
+                                .execute(cpu, cpu.getMemory());
+                    } else {
+                        new ReadRegister8Bit(opcodeObject::setDestinationValue, d.getName())
+                                .execute(cpu, cpu.getMemory());
+                    }
+                }
                 break;
             //RES - set bit u3 to 0 in r8 or [HL], so make this operand2 (source)
             //BIT
@@ -182,7 +195,6 @@ public class OpcodeBuilder {
         switch (m) {
             //LD
             case "LD", "LDH":
-                //TODO: inc or dec
                 opcodeObject.addOp(
                         new Load(opcodeObject)
                 );
@@ -192,6 +204,23 @@ public class OpcodeBuilder {
                 break;
 
         }
+    }
+
+    private void handlePostIncDec(Opcode opcodeObject, OpcodeInfo opcodeInfo) {
+        Operand[] o = opcodeInfo.getOperands();
+        if (o[0].isIncrement()) opcodeObject.addOp(
+                new AluOperation(AluOperation.Type.INC, opcodeObject::getDestinationValue, opcodeObject::setDestinationValue)
+        );
+        else if (o[0].isDecrement()) opcodeObject.addOp(
+                new AluOperation(AluOperation.Type.DEC, opcodeObject::getDestinationValue, opcodeObject::setDestinationValue)
+        );
+
+        else if (o[1].isIncrement()) opcodeObject.addOp(
+                new AluOperation(AluOperation.Type.INC, opcodeObject::getSourceValue, opcodeObject::setSourceValue)
+        );
+        else if (o[1].isDecrement()) opcodeObject.addOp(
+                new AluOperation(AluOperation.Type.DEC, opcodeObject::getSourceValue, opcodeObject::setSourceValue)
+        );
     }
 
     private int calculateCycles(Opcode opcodeObject) {

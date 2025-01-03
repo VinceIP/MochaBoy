@@ -6,7 +6,7 @@ import org.mochaboy.Memory;
 import java.util.function.Consumer;
 
 public class ReadImmediate8bit implements MicroOperation {
-    private Consumer<Integer> consumer;
+    private final Consumer<Integer> consumer;
     private int result;
     private boolean addHRamOffset = false;
 

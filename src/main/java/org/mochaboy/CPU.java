@@ -56,7 +56,7 @@ public class CPU extends Thread {
         opcodeLoader = new OpcodeLoader();
         opcodeWrapper = opcodeLoader.getOpcodeWrapper();
         opcodeHandler = new OpcodeHandler(opcodeWrapper);
-        opcodeBuilder = new OpcodeBuilder(opcodeWrapper);
+        opcodeBuilder = new OpcodeBuilder(this, opcodeWrapper);
         map = memory.getMemoryMap();
     }
 
@@ -187,13 +187,13 @@ public class CPU extends Thread {
                 if (!fetchedCb) fetchedAt = registers.getPC();
                 fetch();
                 if (opcode != 0xCB) {
-                    fetchedCb = false;
                     state = State.DECODE_AND_EXECUTE;
                 } else fetchedCb = true;
                 break;
             case DECODE_AND_EXECUTE:
                 if (!built) {
                     currentOpcodeObject = opcodeBuilder.build(fetchedAt, opcode, fetchedCb);
+                    fetchedCb = false;
                     built = true;
                     //Skip over opcode and force PC to correct location if this isn't implemented yet
                     if (currentOpcodeObject.isUnimplError()) {
