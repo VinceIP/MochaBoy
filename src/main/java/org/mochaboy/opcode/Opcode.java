@@ -8,21 +8,24 @@ import java.util.LinkedList;
 
 public class Opcode {
     private final LinkedList<MicroOperation> microOps;
-    private String destinationRegister;
-    private String sourceRegister;
+    private OpcodeInfo opcodeInfo;
     private String cc;
     private String destinationOperandString;
     private String sourceOperandString;
     private String extraOperandString;
+    private String opcodeHex;
     private Operand destinationOperand;
     private Operand sourceOperand;
     private Operand extraOperand;
+    private int fetchedAt;
     private int sourceValue;
     private int destinationValue;
     private int extraValue;
     private int incrementOperand = 0;
     private int decrementOperand = 0;
+    private int cyclesConsumed;
     private boolean operationsRemaining;
+    private boolean unimplError = false;
 
 
     public Opcode() {
@@ -146,5 +149,99 @@ public class Opcode {
 
     public void setDecrementOperand(int decrementOperand) {
         this.decrementOperand = decrementOperand;
+    }
+
+    public OpcodeInfo getOpcodeInfo() {
+        return opcodeInfo;
+    }
+
+    public void setOpcodeInfo(OpcodeInfo opcodeInfo) {
+        this.opcodeInfo = opcodeInfo;
+    }
+
+    public int getFetchedAt() {
+        return fetchedAt;
+    }
+
+    public void setFetchedAt(int fetchedAt) {
+        this.fetchedAt = fetchedAt;
+    }
+
+    public boolean isUnimplError() {
+        return unimplError;
+    }
+
+    public void setUnimplError(boolean unimplError) {
+        this.unimplError = unimplError;
+    }
+
+    public int getCyclesConsumed() {
+        return cyclesConsumed;
+    }
+
+    public void setCyclesConsumed(int cyclesConsumed) {
+        this.cyclesConsumed = cyclesConsumed;
+    }
+
+    public String getOpcodeHex() {
+        return opcodeHex;
+    }
+
+    public void setOpcodeHex(String opcodeHex) {
+        this.opcodeHex = opcodeHex;
+    }
+
+    public String toString() {
+        Operand[] o = opcodeInfo.getOperands();
+        String mnemonic = opcodeInfo.getMnemonic();
+        if (unimplError) mnemonic = "unimplemented " + mnemonic;
+        String hs = getOpcodeHex();
+        String fs = String.format("%04X", fetchedAt);
+        String ds = String.format("%04X", destinationValue);
+        String ss = String.format("%04X", sourceValue);
+
+        boolean destinationIsImmediate;
+        boolean sourceIsImmediate = false;
+
+        boolean destinationIsDec;
+        boolean sourceIsDec = false;
+        boolean destinationIsInc;
+        boolean sourceIsInc = false;
+
+        destinationIsImmediate = o[0].isImmediate();
+        destinationIsDec = o[0].isDecrement();
+        destinationIsInc = o[0].isIncrement();
+
+        if (o.length > 1) {
+            sourceIsImmediate = o[1].isImmediate();
+            sourceIsDec = o[1].isDecrement();
+            sourceIsInc = o[1].isIncrement();
+        }
+
+        StringBuilder sb = new StringBuilder();
+
+        sb.append(hs).append(" - ");
+
+        sb.append(fs).append(": ").append(mnemonic).append(" ");
+        if (!destinationIsImmediate) sb.append("[");
+        sb.append(o[0].getName());
+        if (destinationIsDec) sb.append("-");
+        if (destinationIsInc) sb.append("+");
+        if (!destinationIsImmediate) sb.append("]");
+        sb.append("(").append(ds).append(") ");
+
+        if (o.length > 1) {
+            if (!sourceIsImmediate) sb.append("[");
+            sb.append(o[1].getName());
+            if (sourceIsDec) sb.append("-");
+            if (sourceIsInc) sb.append("+");
+            if (!sourceIsImmediate) sb.append("]");
+            sb.append("(").append(ss).append(") ");
+        }
+        return sb.toString();
+    }
+
+    public String toString(boolean showCyclesConsumed){
+        return showCyclesConsumed ? toString().concat(" cycles: " + getCyclesConsumed()) : toString();
     }
 }

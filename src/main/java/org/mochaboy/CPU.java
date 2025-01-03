@@ -36,6 +36,7 @@ public class CPU extends Thread {
     private boolean fetchedCb;
     private int totalCycles;
     private int opcode;
+    private int fetchedAt;
     private static final int CYCLES_PER_FRAME = 70224;
     private static final double NS_PER_CYCLE = 238.4;
     private static final double FRAME_TIME_MS = 1000.0 / 59.7275;
@@ -183,14 +184,22 @@ public class CPU extends Thread {
     public void step() {
         switch (state) {
             case FETCH:
+                if (!fetchedCb) fetchedAt = registers.getPC();
                 fetch();
-                if (opcode != 0xCB) state = State.DECODE_AND_EXECUTE;
-                else fetchedCb = true;
+                if (opcode != 0xCB) {
+                    fetchedCb = false;
+                    state = State.DECODE_AND_EXECUTE;
+                } else fetchedCb = true;
                 break;
             case DECODE_AND_EXECUTE:
                 if (!built) {
-                    currentOpcodeObject = opcodeBuilder.build(opcode, fetchedCb);
+                    currentOpcodeObject = opcodeBuilder.build(fetchedAt, opcode, fetchedCb);
                     built = true;
+                    //Skip over opcode and force PC to correct location if this isn't implemented yet
+                    if (currentOpcodeObject.isUnimplError()) {
+                        registers.setPC(fetchedAt + currentOpcodeObject.getOpcodeInfo().getBytes());
+                        currentOpcodeObject.setOperationsRemaining(false);
+                    }
                 }
                 if (currentOpcodeObject.hasOperationsRemaining()) { //If this opcode still has work to do
                     boolean done = false;
@@ -204,6 +213,7 @@ public class CPU extends Thread {
                         }
                     }
                 } else {
+                    System.out.println(currentOpcodeObject.toString(true));
                     built = false;
                     state = State.FETCH;
                 }

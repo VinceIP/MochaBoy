@@ -1,9 +1,6 @@
 package org.mochaboy.opcode;
 
-import org.mochaboy.opcode.operations.Load;
-import org.mochaboy.opcode.operations.MergeOperands;
-import org.mochaboy.opcode.operations.ReadImmediate8bit;
-import org.mochaboy.opcode.operations.ReadRegister16Bit;
+import org.mochaboy.opcode.operations.*;
 
 public class OpcodeBuilder {
     OpcodeWrapper opcodeWrapper;
@@ -12,13 +9,17 @@ public class OpcodeBuilder {
         this.opcodeWrapper = opcodeWrapper;
     }
 
-    public Opcode build(int opcode, boolean isPrefixed) {
+    public Opcode build(int fetchedAt, int opcode, boolean isPrefixed) {
         Opcode opcodeObject = new Opcode();
+        opcodeObject.setFetchedAt(fetchedAt);
         String hexKey = String.format("0x%02X", opcode);
+        opcodeObject.setOpcodeHex(hexKey);
         OpcodeInfo opcodeInfo = isPrefixed ? opcodeWrapper.getCbprefixed().get(hexKey) :
                 opcodeWrapper.getUnprefixed().get(hexKey);
+        opcodeObject.setOpcodeInfo(opcodeInfo);
         buildMicroOpsFromOperands(opcodeObject, opcodeInfo);
         buildOpsFromMnemonics(opcodeObject, opcodeInfo);
+        opcodeObject.setCyclesConsumed(1 + calculateCycles(opcodeObject));
         return opcodeObject;
     }
 
@@ -127,7 +128,7 @@ public class OpcodeBuilder {
                         new ReadImmediate8bit(opcodeObject::setExtraValue)
                 );
                 opcodeObject.addOp(
-                        new MergeOperands(
+                        new FlipBytes(
                                 opcodeObject::getSourceValue, opcodeObject::getExtraValue, opcodeObject::setSourceValue)
                 );
                 break;
@@ -181,14 +182,24 @@ public class OpcodeBuilder {
         switch (m) {
             //LD
             case "LD", "LDH":
+                //TODO: inc or dec
                 opcodeObject.addOp(
                         new Load(opcodeObject)
                 );
                 break;
             default:
-                System.out.println("Mnemonic not implemented: " + m);
+                opcodeObject.setUnimplError(true);
+                break;
 
         }
+    }
+
+    private int calculateCycles(Opcode opcodeObject) {
+        int cycles = 0;
+        for (MicroOperation mo : opcodeObject.getMicroOps()) {
+            cycles += mo.getCycles();
+        }
+        return cycles;
     }
 
 }
