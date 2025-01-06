@@ -1,6 +1,7 @@
 package org.mochaboy.opcode;
 
 import org.mochaboy.CPU;
+import org.mochaboy.DataType;
 import org.mochaboy.Memory;
 import org.mochaboy.opcode.operations.MicroOperation;
 
@@ -17,13 +18,15 @@ public class Opcode {
     private Operand destinationOperand;
     private Operand sourceOperand;
     private Operand extraOperand;
+    private DataType sourceType;
+    private DataType destinationType;
     private int fetchedAt;
     private int sourceValue;
     private int destinationValue;
     private int extraValue;
-    private int incrementOperand = 0;
-    private int decrementOperand = 0;
     private int cyclesConsumed;
+    private boolean increment;
+    private boolean decrement;
     private boolean operationsRemaining;
     private boolean unimplError = false;
 
@@ -135,22 +138,6 @@ public class Opcode {
         this.cc = cc;
     }
 
-    public int getIncrementOperand() {
-        return incrementOperand;
-    }
-
-    public void setIncrementOperand(int incrementOperand) {
-        this.incrementOperand = incrementOperand;
-    }
-
-    public int getDecrementOperand() {
-        return decrementOperand;
-    }
-
-    public void setDecrementOperand(int decrementOperand) {
-        this.decrementOperand = decrementOperand;
-    }
-
     public OpcodeInfo getOpcodeInfo() {
         return opcodeInfo;
     }
@@ -191,6 +178,22 @@ public class Opcode {
         this.opcodeHex = opcodeHex;
     }
 
+    public DataType getSourceType() {
+        return sourceType;
+    }
+
+    public void setSourceType(DataType sourceType) {
+        this.sourceType = sourceType;
+    }
+
+    public DataType getDestinationType() {
+        return destinationType;
+    }
+
+    public void setDestinationType(DataType destinationType) {
+        this.destinationType = destinationType;
+    }
+
     public String toString() {
         Operand[] o = opcodeInfo.getOperands();
         String mnemonic = opcodeInfo.getMnemonic();
@@ -220,9 +223,7 @@ public class Opcode {
 
         StringBuilder sb = new StringBuilder();
 
-        sb.append(hs).append(" - ");
-
-        sb.append(fs).append(": ").append(mnemonic).append(" ");
+        sb.append(fs).append(": ").append(hs).append(" ").append(mnemonic).append(" ");
         if (!destinationIsImmediate) sb.append("[");
         sb.append(o[0].getName());
         if (destinationIsDec) sb.append("-");

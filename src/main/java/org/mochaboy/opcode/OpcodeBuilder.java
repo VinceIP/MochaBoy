@@ -1,11 +1,13 @@
 package org.mochaboy.opcode;
 
 import org.mochaboy.CPU;
+import org.mochaboy.DataType;
 import org.mochaboy.opcode.operations.*;
 
 public class OpcodeBuilder {
     private final CPU cpu;
     private final OpcodeWrapper opcodeWrapper;
+    private boolean checkIncDec;
 
     public OpcodeBuilder(CPU cpu, OpcodeWrapper opcodeWrapper) {
         this.cpu = cpu;
@@ -22,7 +24,7 @@ public class OpcodeBuilder {
         opcodeObject.setOpcodeInfo(opcodeInfo);
         buildMicroOpsFromOperands(opcodeObject, opcodeInfo);
         buildOpsFromMnemonics(opcodeObject, opcodeInfo);
-        handlePostIncDec(opcodeObject, opcodeInfo);
+        if (checkIncDec) handlePostIncDec(opcodeObject, opcodeInfo);
         opcodeObject.setCyclesConsumed(1 + calculateCycles(opcodeObject));
         return opcodeObject;
     }
@@ -63,6 +65,7 @@ public class OpcodeBuilder {
         switch (d.getName()) {
             case "a8":
                 //Only occurs in LDH
+                opcodeObject.setDestinationType(DataType.A8);
                 opcodeObject.addOp(
                         new ReadImmediate8bit(opcodeObject::setDestinationValue, true) //Adds offset of FF00
                 );
@@ -70,6 +73,7 @@ public class OpcodeBuilder {
             case "a16":
                 //This is an address
                 //2 cycles to read 16-bit address
+                opcodeObject.setDestinationType(DataType.N16);
                 opcodeObject.addOp(new ReadImmediate8bit(opcodeObject::setDestinationValue));
                 opcodeObject.addOp(new ReadImmediate8bit(opcodeObject::setSourceValue));
                 opcodeObject.addOp(
@@ -91,8 +95,7 @@ public class OpcodeBuilder {
             case "DE":
             case "HL":
                 //Signal for post increment/decrement as in LD [HL-]/[HL+] A
-                if (d.isIncrement()) opcodeObject.setIncrementOperand(1);
-                else if (d.isDecrement()) opcodeObject.setDecrementOperand(1);
+                if (d.isIncrement() || d.isDecrement()) checkIncDec = true;
             case "SP":
             case "PC":
                 //If not an immediate value, read the address held in a 16-bit register
@@ -101,9 +104,11 @@ public class OpcodeBuilder {
                 } else {
                     //This is a register. Set opcodeObject.destinationValue to the value held in that register
                     if (d.getName().length() > 1) {
+                        opcodeObject.setDestinationType(DataType.R16);
                         new ReadRegister16Bit(opcodeObject::setDestinationValue, d.getName())
                                 .execute(cpu, cpu.getMemory());
                     } else {
+                        opcodeObject.setDestinationType(DataType.R16);
                         new ReadRegister8Bit(opcodeObject::setDestinationValue, d.getName())
                                 .execute(cpu, cpu.getMemory());
                     }
@@ -112,7 +117,6 @@ public class OpcodeBuilder {
             //RES - set bit u3 to 0 in r8 or [HL], so make this operand2 (source)
             //BIT
             case "0", "1", "2", "3", "4", "5", "6", "7":
-                //opcodeObject.setSource(Integer.parseInt(d.getName()));
                 break;
             case "Z":
             case "NZ":
@@ -127,13 +131,21 @@ public class OpcodeBuilder {
         opcodeObject.setSourceOperand(s);
         switch (s.getName()) {
             case "n8":
+                opcodeObject.setSourceType(DataType.A8);
                 opcodeObject.addOp(
                         new ReadImmediate8bit(opcodeObject::setSourceValue)
                 );
                 break;
-
+            case "a8":
+                //Only occurs in LDH
+                opcodeObject.setSourceType(DataType.A8);
+                opcodeObject.addOp(
+                        new ReadImmediate8bit(opcodeObject::setSourceValue, true) //Adds offset of FF00
+                );
+                break;
             case "n16":
                 //Read address, then merge, set as operand 2
+                opcodeObject.setSourceType(DataType.N16);
                 opcodeObject.addOp(
                         new ReadImmediate8bit(opcodeObject::setSourceValue)
                 );
@@ -148,6 +160,7 @@ public class OpcodeBuilder {
 
             case "a16":
                 //Same as above, but a16 only appears in JUMP/CALL, so set it as operand 1
+                opcodeObject.setDestinationType(DataType.N16);
                 opcodeObject.addOp(
                         new ReadImmediate8bit(opcodeObject::setDestinationValue)
                 );
@@ -159,13 +172,6 @@ public class OpcodeBuilder {
                                 opcodeObject::getDestinationValue, opcodeObject::getSourceValue, opcodeObject::setDestinationValue)
                 );
                 break;
-
-            case "a8":
-                //Only occurs in LDH
-                opcodeObject.addOp(
-                        new ReadImmediate8bit(opcodeObject::setSourceValue, true) //Adds offset of FF00
-                );
-                break;
             case "A":
             case "B":
             case "C":
@@ -173,13 +179,14 @@ public class OpcodeBuilder {
             case "E":
             case "H":
             case "L":
+                opcodeObject.setSourceType(DataType.R8);
+                opcodeObject.addOp(new ReadRegister8Bit(opcodeObject::setSourceValue, s.getName()));
+                break;
             case "AF":
             case "BC":
             case "DE":
             case "HL":
-                //Signal for post increment/decrement as in LD [HL-]/[HL+] A
-                if (s.isIncrement()) opcodeObject.setIncrementOperand(2);
-                else if (s.isDecrement()) opcodeObject.setDecrementOperand(2);
+                if (s.isIncrement() || s.isDecrement()) checkIncDec = true;
             case "SP":
             case "PC":
                 //If not an immediate value, read the address held in a 16-bit register
@@ -209,18 +216,20 @@ public class OpcodeBuilder {
     private void handlePostIncDec(Opcode opcodeObject, OpcodeInfo opcodeInfo) {
         Operand[] o = opcodeInfo.getOperands();
         if (o[0].isIncrement()) opcodeObject.addOp(
-                new AluOperation(AluOperation.Type.INC, opcodeObject::getDestinationValue, opcodeObject::setDestinationValue)
+                new AluOperation(AluOperation.Type.INC, DataType.R16, opcodeObject::getDestinationValue)
         );
         else if (o[0].isDecrement()) opcodeObject.addOp(
-                new AluOperation(AluOperation.Type.DEC, opcodeObject::getDestinationValue, opcodeObject::setDestinationValue)
+                new AluOperation(AluOperation.Type.DEC, DataType.R16, opcodeObject::getDestinationValue)
         );
-
-        else if (o[1].isIncrement()) opcodeObject.addOp(
-                new AluOperation(AluOperation.Type.INC, opcodeObject::getSourceValue, opcodeObject::setSourceValue)
-        );
-        else if (o[1].isDecrement()) opcodeObject.addOp(
-                new AluOperation(AluOperation.Type.DEC, opcodeObject::getSourceValue, opcodeObject::setSourceValue)
-        );
+        if (o.length > 1) {
+            if (o[1].isIncrement()) opcodeObject.addOp(
+                    new AluOperation(AluOperation.Type.INC, DataType.R16, opcodeObject::getDestinationValue)
+            );
+            else if (o[1].isDecrement()) opcodeObject.addOp(
+                    new AluOperation(AluOperation.Type.DEC, DataType.R16, opcodeObject::getDestinationValue)
+            );
+        }
+        checkIncDec = false;
     }
 
     private int calculateCycles(Opcode opcodeObject) {

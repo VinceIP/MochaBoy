@@ -192,6 +192,9 @@ public class CPU extends Thread {
                 break;
             case DECODE_AND_EXECUTE:
                 if (!built) {
+                    if(getRegisters().getPC() == 0x08){
+                        System.out.printf("");
+                    }
                     currentOpcodeObject = opcodeBuilder.build(fetchedAt, opcode, fetchedCb);
                     fetchedCb = false;
                     built = true;

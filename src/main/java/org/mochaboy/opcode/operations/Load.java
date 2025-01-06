@@ -1,6 +1,7 @@
 package org.mochaboy.opcode.operations;
 
 import org.mochaboy.CPU;
+import org.mochaboy.DataType;
 import org.mochaboy.Memory;
 import org.mochaboy.opcode.Opcode;
 import org.mochaboy.registers.Registers;
@@ -17,16 +18,20 @@ public class Load implements MicroOperation {
         Registers r = cpu.getRegisters();
         String ss = opcode.getSourceOperandString();
         String ds = opcode.getDestinationOperandString();
+        DataType destinationType = opcode.getDestinationType();
+        DataType sourceType = opcode.getSourceType();
         int source;
-        //If a register string is set here
-        if (Registers.isValidRegister(cpu, ss) && opcode.getDestinationOperand().isImmediate()) {
+
+        //Get the value to be copied
+        if (sourceType == DataType.R8 || sourceType == DataType.R16) {
             source = r.getByName(ss); //Pull the source value from a register
         } else {
             //If ss is a register but not immediate, or explicitly "a8", "n8", "n16", we expect a source value
             source = opcode.getSourceValue();
         }
 
-        if (Registers.isValidRegister(cpu, ds) && opcode.getSourceOperand().isImmediate()) { //If destination is a register
+        //Store in destination
+        if (Registers.isValidRegister(cpu, ds) && opcode.getDestinationOperand().isImmediate()) { //If destination is a register
             source = (ds.length() > 1) ? source & 0xFFFF : source & 0xFF; //Mask for 16 or 8 bits
             r.setByName(ds, source);
         } else {
