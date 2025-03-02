@@ -22,7 +22,7 @@ public class CPU extends Thread {
     private OpcodeLoader opcodeLoader;
     private OpcodeBuilder opcodeBuilder;
     private OpcodeWrapper opcodeWrapper;
-    private OpcodeHandler opcodeHandler;
+    //private OpcodeHandler opcodeHandler;
     private State state;
     private long tStateCounter;
     private boolean built = false;
@@ -55,7 +55,7 @@ public class CPU extends Thread {
         input = new Input(memory);
         opcodeLoader = new OpcodeLoader();
         opcodeWrapper = opcodeLoader.getOpcodeWrapper();
-        opcodeHandler = new OpcodeHandler(opcodeWrapper);
+        //opcodeHandler = new OpcodeHandler(opcodeWrapper);
         opcodeBuilder = new OpcodeBuilder(this, opcodeWrapper);
         map = memory.getMemoryMap();
     }
@@ -72,7 +72,7 @@ public class CPU extends Thread {
         while (running) {
             step();
             try {
-                sleep(100);
+                sleep(50);
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
@@ -248,11 +248,11 @@ public class CPU extends Thread {
 //        return opcodeInfo;
 //    }
 
-    public int execute(OpcodeInfo opcodeInfo) {
-        if (opcodeInfo == null) return 0;
-        else
-            return opcodeHandler.execute(this, opcodeInfo);
-    }
+//    public int execute(OpcodeInfo opcodeInfo) {
+//        if (opcodeInfo == null) return 0;
+//        else
+//            return opcodeHandler.execute(this, opcodeInfo);
+//    }
 
     private void postBootInit() {
         Registers reg = getRegisters();

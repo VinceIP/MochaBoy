@@ -62,7 +62,7 @@ public class FlagCalculator {
         calculators.put("DEC", (cpu, xVal, yVal, operands) -> {
             FlagConditions conditions = new FlagConditions();
             //Flags only affected under these conditions
-            if (OpcodeHandler.is8BitRegister(operands[0].getName()) || operands[0].getName().equals("HL")) {
+            if (Registers.isValidRegister(cpu, operands[0].getName())) {
                 conditions.isZero = ((xVal - 1) & 0xFF) == 0; // Much simpler and accurate
                 conditions.isHalfCarry = (xVal & 0xF) < 1;  // Correct half-carry logic
                 conditions.isSubtract = true; // Forgot to set this flag
@@ -72,7 +72,7 @@ public class FlagCalculator {
 
         calculators.put("INC", (cpu, xVal, yVal, operands) -> {
             FlagConditions conditions = new FlagConditions();
-            if (OpcodeHandler.is8BitRegister(operands[0].getName()) || operands[0].getName().equals("HL")) {
+            if (Registers.isValidRegister(cpu, operands[0].getName())) {
                 conditions.isZero = ((xVal + yVal) & 0xFF) == 0;
                 conditions.isHalfCarry = (xVal & 0xF) + (yVal & 0xF) > 0xF;
             }
@@ -258,6 +258,16 @@ public class FlagCalculator {
                 return conditions;
             }
         });
+
+        calculators.put("LDH", (cpu, xVal, yVal, operands) -> {
+            return new FlagConditions();
+        });
+    }
+
+
+    public void processFlags(CPU cpu, OpcodeInfo opcodeInfo, int xVal, int yVal) {
+        FlagConditions conditions = calculateFlags(cpu, opcodeInfo.getMnemonic(), xVal, yVal, opcodeInfo.getOperands());
+        applyFlags(cpu, opcodeInfo.getFlags(), conditions);
     }
 
     public FlagConditions calculateFlags(CPU cpu, String mnemonic, int xVal, int yVal, Operand[] operands) {
@@ -265,9 +275,86 @@ public class FlagCalculator {
         if (calculator == null) throw new IllegalArgumentException("No flag calculator for " + mnemonic);
         return calculator.calculate(cpu, xVal, yVal, operands);
     }
+
+    /**
+     * Apply flags to CPU based on calculated conditions or opcode info.
+     * Flag states are set to their expected values when Opcodes.json indicates "0", "1", or "-" for flag states.
+     * Otherwise, FlagCalculator determines the set flag.
+     *
+     * @param flags
+     * @param conditions
+     */
+    private void applyFlags(CPU cpu, Flags flags, FlagConditions conditions) {
+        Registers r = cpu.getRegisters();
+        //Zero flag
+        switch (flags.getZ()) {
+            //OpcodeInfo indicates this flag should be set based on conditions that were set in the flag calculator
+            case "Z":
+                r.setFlag(Registers.FLAG_ZERO, conditions.isZero);
+                break;
+            //Opcode info indicates this flag should always be cleared
+            case "0":
+                r.clearFlag(Registers.FLAG_ZERO);
+                break;
+            //Opcode info indicates this flags should always be set
+            case "1":
+                r.setFlag(Registers.FLAG_ZERO);
+                break;
+            //Opcode info could give "-", indicating nothing should change with this flag
+        }
+
+        // Subtract flag
+        switch (flags.getN()) {
+            case "N":
+                r.setFlag(Registers.FLAG_SUBTRACT, conditions.isSubtract);
+            case "0":
+                r.clearFlag(Registers.FLAG_SUBTRACT);
+                break;
+            case "1":
+                r.setFlag(Registers.FLAG_SUBTRACT);
+                break;
+            // "-" and other cases - do nothing
+        }
+
+        // Half-carry flag
+        switch (flags.getH()) {
+            case "H":
+                r.setFlag(Registers.FLAG_HALF_CARRY, conditions.isHalfCarry);
+                break;
+            case "0":
+                r.clearFlag(Registers.FLAG_HALF_CARRY);
+                break;
+            case "1":
+                r.setFlag(Registers.FLAG_HALF_CARRY);
+                break;
+            // "-" case - do nothing
+        }
+
+        // Carry flag
+        switch (flags.getC()) {
+            case "C":
+                r.setFlag(Registers.FLAG_CARRY, conditions.isCarry);
+                break;
+            case "0":
+                r.clearFlag(Registers.FLAG_CARRY);
+                break;
+            case "1":
+                r.setFlag(Registers.FLAG_CARRY);
+                break;
+            // "-" case - do nothing
+        }
+    }
 }
+
 
 @FunctionalInterface
 interface FlagConditionCalculator {
     FlagConditions calculate(CPU cpu, int xVal, int yVal, Operand[] operands);
+}
+
+class FlagConditions {
+    boolean isZero;
+    boolean isHalfCarry;
+    boolean isCarry;
+    boolean isSubtract;
 }

@@ -203,17 +203,19 @@ public class Opcode {
         String ds = String.format("%04X", destinationValue);
         String ss = String.format("%04X", sourceValue);
 
-        boolean destinationIsImmediate;
+        boolean destinationIsImmediate = false;
         boolean sourceIsImmediate = false;
 
-        boolean destinationIsDec;
+        boolean destinationIsDec = false;
         boolean sourceIsDec = false;
-        boolean destinationIsInc;
+        boolean destinationIsInc = true;
         boolean sourceIsInc = false;
 
-        destinationIsImmediate = o[0].isImmediate();
-        destinationIsDec = o[0].isDecrement();
-        destinationIsInc = o[0].isIncrement();
+        if (o.length > 0) {
+            destinationIsImmediate = o[0].isImmediate();
+            destinationIsDec = o[0].isDecrement();
+            destinationIsInc = o[0].isIncrement();
+        }
 
         if (o.length > 1) {
             sourceIsImmediate = o[1].isImmediate();
@@ -224,25 +226,27 @@ public class Opcode {
         StringBuilder sb = new StringBuilder();
 
         sb.append(fs).append(": ").append(hs).append(" ").append(mnemonic).append(" ");
-        if (!destinationIsImmediate) sb.append("[");
-        sb.append(o[0].getName());
-        if (destinationIsDec) sb.append("-");
-        if (destinationIsInc) sb.append("+");
-        if (!destinationIsImmediate) sb.append("]");
-        sb.append("(").append(ds).append(") ");
+        if (o.length > 0) {
+            if (!destinationIsImmediate) sb.append("[");
+            sb.append(o[0].getName());
+            if (destinationIsDec) sb.append("-");
+            if (destinationIsInc) sb.append("+");
+            if (!destinationIsImmediate) sb.append("]");
+            sb.append("(").append(ds).append(") ");
 
-        if (o.length > 1) {
-            if (!sourceIsImmediate) sb.append("[");
-            sb.append(o[1].getName());
-            if (sourceIsDec) sb.append("-");
-            if (sourceIsInc) sb.append("+");
-            if (!sourceIsImmediate) sb.append("]");
-            sb.append("(").append(ss).append(") ");
+            if (o.length > 1) {
+                if (!sourceIsImmediate) sb.append("[");
+                sb.append(o[1].getName());
+                if (sourceIsDec) sb.append("-");
+                if (sourceIsInc) sb.append("+");
+                if (!sourceIsImmediate) sb.append("]");
+                sb.append("(").append(ss).append(") ");
+            }
         }
         return sb.toString();
     }
 
-    public String toString(boolean showCyclesConsumed){
+    public String toString(boolean showCyclesConsumed) {
         return showCyclesConsumed ? toString().concat(" cycles: " + getCyclesConsumed()) : toString();
     }
 }

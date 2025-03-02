@@ -7,11 +7,13 @@ import org.mochaboy.opcode.operations.*;
 public class OpcodeBuilder {
     private final CPU cpu;
     private final OpcodeWrapper opcodeWrapper;
+    private final FlagCalculator flagCalculator;
     private boolean checkIncDec;
 
     public OpcodeBuilder(CPU cpu, OpcodeWrapper opcodeWrapper) {
         this.cpu = cpu;
         this.opcodeWrapper = opcodeWrapper;
+        this.flagCalculator = new FlagCalculator();
     }
 
     public Opcode build(int fetchedAt, int opcode, boolean isPrefixed) {
@@ -22,8 +24,16 @@ public class OpcodeBuilder {
         OpcodeInfo opcodeInfo = isPrefixed ? opcodeWrapper.getCbprefixed().get(hexKey) :
                 opcodeWrapper.getUnprefixed().get(hexKey);
         opcodeObject.setOpcodeInfo(opcodeInfo);
+
+        //Build opcode
         buildMicroOpsFromOperands(opcodeObject, opcodeInfo);
         buildOpsFromMnemonics(opcodeObject, opcodeInfo);
+
+        //Queue up a flag process op
+        opcodeObject.addOp(new HandleFlags(flagCalculator, cpu, opcodeInfo,
+                opcodeObject::getDestinationValue, opcodeObject::getSourceValue));
+
+        //Determine if this is LD [HL-/+]
         if (checkIncDec) handlePostIncDec(opcodeObject, opcodeInfo);
         opcodeObject.setCyclesConsumed(1 + calculateCycles(opcodeObject));
         return opcodeObject;
@@ -200,12 +210,57 @@ public class OpcodeBuilder {
     private void buildOpsFromMnemonics(Opcode opcodeObject, OpcodeInfo opcodeInfo) {
         String m = opcodeInfo.getMnemonic();
         switch (m) {
+            //ALU operations
+            case "ADC":
+                opcodeObject.addOp(
+                        new AluOperation(AluOperation.Type.ADC, opcodeObject::getDestinationValue, opcodeObject::getSourceValue)
+                );
+                break;
+            case "ADD":
+                opcodeObject.addOp(
+                        new AluOperation(AluOperation.Type.ADD, opcodeObject::getDestinationValue, opcodeObject::getSourceValue)
+                );
+                break;
+            case "CP":
+                opcodeObject.addOp(
+                        new AluOperation(AluOperation.Type.CP, opcodeObject::getDestinationValue, opcodeObject::getSourceValue)
+                );
+                break;
+            case "DEC":
+                opcodeObject.addOp(
+                        new AluOperation(AluOperation.Type.DEC, opcodeObject::getDestinationValue, opcodeObject::getSourceValue)
+                );
+                break;
             //LD
             case "LD", "LDH":
                 opcodeObject.addOp(
                         new Load(opcodeObject)
                 );
                 break;
+
+
+            //Bitwise operations
+            case "AND":
+                opcodeObject.addOp(
+                        new BitwiseOperation(BitwiseOperation.Type.AND, opcodeObject::getSourceValue)
+                );
+                break;
+            case "CPL":
+                opcodeObject.addOp(
+                        new BitwiseOperation(BitwiseOperation.Type.CPL, opcodeObject::getSourceValue)
+                );
+                break;
+            case "OR":
+                opcodeObject.addOp(
+                        new BitwiseOperation(BitwiseOperation.Type.OR, opcodeObject::getSourceValue)
+                );
+                break;
+            case "XOR":
+                opcodeObject.addOp(
+                        new BitwiseOperation(BitwiseOperation.Type.XOR, opcodeObject::getSourceValue)
+                );
+                break;
+
             default:
                 opcodeObject.setUnimplError(true);
                 break;
@@ -216,17 +271,17 @@ public class OpcodeBuilder {
     private void handlePostIncDec(Opcode opcodeObject, OpcodeInfo opcodeInfo) {
         Operand[] o = opcodeInfo.getOperands();
         if (o[0].isIncrement()) opcodeObject.addOp(
-                new AluOperation(AluOperation.Type.INC, DataType.R16, opcodeObject::getDestinationValue)
+                new AluOperation(AluOperation.Type.INC, opcodeObject::getDestinationValue, null, true)
         );
         else if (o[0].isDecrement()) opcodeObject.addOp(
-                new AluOperation(AluOperation.Type.DEC, DataType.R16, opcodeObject::getDestinationValue)
+                new AluOperation(AluOperation.Type.DEC, opcodeObject::getDestinationValue, null, true)
         );
         if (o.length > 1) {
             if (o[1].isIncrement()) opcodeObject.addOp(
-                    new AluOperation(AluOperation.Type.INC, DataType.R16, opcodeObject::getDestinationValue)
+                    new AluOperation(AluOperation.Type.INC, null, opcodeObject::getSourceValue, true)
             );
             else if (o[1].isDecrement()) opcodeObject.addOp(
-                    new AluOperation(AluOperation.Type.DEC, DataType.R16, opcodeObject::getDestinationValue)
+                    new AluOperation(AluOperation.Type.DEC, null, opcodeObject::getSourceValue, true)
             );
         }
         checkIncDec = false;
