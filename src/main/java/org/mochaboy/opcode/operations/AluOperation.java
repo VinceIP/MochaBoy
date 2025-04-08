@@ -1,7 +1,6 @@
 package org.mochaboy.opcode.operations;
 
 import org.mochaboy.CPU;
-import org.mochaboy.DataType;
 import org.mochaboy.Memory;
 import org.mochaboy.registers.Registers;
 
@@ -14,6 +13,7 @@ public class AluOperation implements MicroOperation {
     private final Type type;
     private int result;
     private boolean is16BitOperation;
+    private String destinationRegister = "A";
 
     public AluOperation(Type type, Supplier<Integer> destinationValue) {
         this.type = type;
@@ -24,6 +24,13 @@ public class AluOperation implements MicroOperation {
         this.type = type;
         this.destinationValue = destinationValue;
         this.sourceValue = sourceValue;
+    }
+
+    public AluOperation(Type type, Supplier<Integer> destinationValue, Supplier<Integer> sourceValue, String destinationRegister) {
+        this.type = type;
+        this.destinationValue = destinationValue;
+        this.sourceValue = sourceValue;
+        this.destinationRegister = destinationRegister;
     }
 
     public AluOperation(Type type, Supplier<Integer> destinationValue, Supplier<Integer> sourceValue, boolean is16BitOperation) {
@@ -86,7 +93,7 @@ public class AluOperation implements MicroOperation {
         if (is16BitOperation) {
             r.setByName("HL", result); //Only for HL post inc/dec
         } else {
-            r.setByName("A", result);
+            r.setByName(destinationRegister, result);
         }
     }
 

@@ -113,19 +113,19 @@ public class OpcodeBuilder {
                     opcodeObject.addOp(new ReadRegister16Bit(opcodeObject::setDestinationValue, d.getName()));
                 } else {
                     //This is a register. Set opcodeObject.destinationValue to the value held in that register
-                    if (d.getName().length() > 1) {
+                    if (d.getName().length() > 1) { //If register has 2 chars its 16 bit
                         opcodeObject.setDestinationType(DataType.R16);
-                        new ReadRegister16Bit(opcodeObject::setDestinationValue, d.getName())
-                                .execute(cpu, cpu.getMemory());
+                        opcodeObject.addOp(
+                                new ReadRegister16Bit(opcodeObject::setDestinationValue, d.getName()));
                     } else {
                         opcodeObject.setDestinationType(DataType.R16);
-                        new ReadRegister8Bit(opcodeObject::setDestinationValue, d.getName())
-                                .execute(cpu, cpu.getMemory());
+                        opcodeObject.addOp(
+                                new ReadRegister8Bit(opcodeObject::setDestinationValue, d.getName()));
                     }
                 }
                 break;
             //RES - set bit u3 to 0 in r8 or [HL], so make this operand2 (source)
-            //BIT
+            //BIT - test bit u3 in r8
             case "0", "1", "2", "3", "4", "5", "6", "7":
                 break;
             case "Z":
@@ -154,7 +154,7 @@ public class OpcodeBuilder {
                 );
                 break;
             case "n16":
-                //Read address, then merge, set as operand 2
+                //Read integer constant value, then merge, set as operand 2
                 opcodeObject.setSourceType(DataType.N16);
                 opcodeObject.addOp(
                         new ReadImmediate8bit(opcodeObject::setSourceValue)
@@ -199,8 +199,12 @@ public class OpcodeBuilder {
                 if (s.isIncrement() || s.isDecrement()) checkIncDec = true;
             case "SP":
             case "PC":
-                //If not an immediate value, read the address held in a 16-bit register
+                //If not an immediate value, read the byte stored at memory pointed to by this register
                 if (!s.isImmediate()) {
+                    opcodeObject.addOp(
+                            new ReadMemory8Bits(opcodeObject::setSourceValue, s.getName())
+                    );
+                } else {
                     opcodeObject.addOp(new ReadRegister16Bit(opcodeObject::setSourceValue, s.getName()));
                 }
                 break;
@@ -217,8 +221,10 @@ public class OpcodeBuilder {
                 );
                 break;
             case "ADD":
+                boolean is16Bit = opcodeObject.getDestinationType() == DataType.R16 || opcodeObject.getDestinationType() == DataType.N16;
                 opcodeObject.addOp(
-                        new AluOperation(AluOperation.Type.ADD, opcodeObject::getDestinationValue, opcodeObject::getSourceValue)
+                        new AluOperation(AluOperation.Type.ADD, opcodeObject::getDestinationValue, opcodeObject::getSourceValue,
+                                is16Bit)
                 );
                 break;
             case "CP":
@@ -231,13 +237,30 @@ public class OpcodeBuilder {
                         new AluOperation(AluOperation.Type.DEC, opcodeObject::getDestinationValue, opcodeObject::getSourceValue)
                 );
                 break;
-            //LD
+            case "INC":
+                opcodeObject.addOp(
+                        new AluOperation(AluOperation.Type.INC, opcodeObject::getDestinationValue, opcodeObject::getSourceValue,
+                                opcodeObject.getDestinationOperandString())
+                );
+                break;
+            case "SBC":
+                opcodeObject.addOp(
+                        new AluOperation(AluOperation.Type.SBC, opcodeObject::getDestinationValue, opcodeObject::getSourceValue)
+                );
+                break;
+            case "SUB":
+                opcodeObject.addOp(
+                        new AluOperation(AluOperation.Type.SUB, opcodeObject::getDestinationValue, opcodeObject::getSourceValue)
+                );
+                break;
+
+
+            //LD Operations
             case "LD", "LDH":
                 opcodeObject.addOp(
                         new Load(opcodeObject)
                 );
                 break;
-
 
             //Bitwise operations
             case "AND":
@@ -260,6 +283,8 @@ public class OpcodeBuilder {
                         new BitwiseOperation(BitwiseOperation.Type.XOR, opcodeObject::getSourceValue)
                 );
                 break;
+
+            //Bit flag operations
 
             default:
                 opcodeObject.setUnimplError(true);

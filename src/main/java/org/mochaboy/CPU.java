@@ -192,10 +192,10 @@ public class CPU extends Thread {
                 break;
             case DECODE_AND_EXECUTE:
                 if (!built) {
-                    if(getRegisters().getPC() == 0x08){
+                    currentOpcodeObject = opcodeBuilder.build(fetchedAt, opcode, fetchedCb);
+                    if(currentOpcodeObject.getOpcodeInfo().getMnemonic().equals("INC")){
                         System.out.printf("");
                     }
-                    currentOpcodeObject = opcodeBuilder.build(fetchedAt, opcode, fetchedCb);
                     fetchedCb = false;
                     built = true;
                     //Skip over opcode and force PC to correct location if this isn't implemented yet
