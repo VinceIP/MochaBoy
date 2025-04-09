@@ -41,9 +41,10 @@ public class Opcode {
         if (microOps.isEmpty()) operationsRemaining = false;
     }
 
-    public void addOp(MicroOperation microOperation) {
+    public MicroOperation addOp(MicroOperation microOperation) {
         operationsRemaining = true;
         microOps.add(microOperation);
+        return microOperation;
     }
 
     public String getDestinationOperandString() {

@@ -2,6 +2,7 @@ package org.mochaboy.opcode.operations;
 
 import org.mochaboy.CPU;
 import org.mochaboy.Memory;
+import org.mochaboy.registers.Registers;
 
 import java.util.function.Supplier;
 
@@ -13,7 +14,7 @@ public class BitFlagOperation implements MicroOperation {
 
     //FYI - BIT is not handled here because it changes no values, it's handled in FlagCalculator
 
-    public BitFlagOperation(Type type, Supplier<Integer> bitIndex, Supplier<Integer> targetValue, Type type1, Supplier<Integer> bitIndex1, Supplier<Integer> targetValue1) {
+    public BitFlagOperation(Type type, Supplier<Integer> bitIndex, Supplier<Integer> targetValue) {
         this.type = type;
         this.bitIndex = bitIndex;
         this.targetValue = targetValue;
@@ -32,6 +33,8 @@ public class BitFlagOperation implements MicroOperation {
         }
         return null;
     }
+
+
 
     @Override
     public int getCycles() {

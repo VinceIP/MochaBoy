@@ -56,7 +56,6 @@ public class AluOperation implements MicroOperation {
             case SBC -> result = sbc(cpu, x, y);
             case SUB -> result = sub(x, y);
         }
-        applyResult(cpu);
         return this;
     }
 
@@ -87,16 +86,6 @@ public class AluOperation implements MicroOperation {
     private int sub(int x, int y) {
         return (x - y) & 0xFF;
     }
-
-    private void applyResult(CPU cpu) {
-        Registers r = cpu.getRegisters();
-        if (is16BitOperation) {
-            r.setByName("HL", result); //Only for HL post inc/dec
-        } else {
-            r.setByName(destinationRegister, result);
-        }
-    }
-
 
     @Override
     public int getCycles() {
