@@ -21,28 +21,24 @@ public class OpcodeBuilder {
         opcodeObject.setFetchedAt(fetchedAt);
         String hexKey = String.format("0x%02X", opcode);
         opcodeObject.setOpcodeHex(hexKey);
-        OpcodeInfo opcodeInfo = isPrefixed ? opcodeWrapper.getCbprefixed().get(hexKey) :
-                opcodeWrapper.getUnprefixed().get(hexKey);
+        OpcodeInfo opcodeInfo = isPrefixed ?
+                opcodeWrapper.getCbprefixed().get(hexKey) : opcodeWrapper.getUnprefixed().get(hexKey);
         opcodeObject.setOpcodeInfo(opcodeInfo);
+
+        if(opcodeObject.getFetchedAt() == 0x13){
+            System.out.printf("");
+        }
 
         //Build opcode
         buildMicroOpsFromOperands(opcodeObject, opcodeInfo);
-        MicroOperation microOperation = buildOpsFromMnemonics(opcodeObject, opcodeInfo);
-        assert microOperation != null;
-        applyResult(opcodeObject, microOperation);
-
+        buildOpsFromMnemonics(opcodeObject, opcodeInfo);
         //Queue up a flag process op
         opcodeObject.addOp(new HandleFlags(flagCalculator, cpu, opcodeInfo,
                 opcodeObject::getDestinationValue, opcodeObject::getSourceValue));
 
         //Determine if this is LD [HL-/+]
         if (checkIncDec) {
-            MicroOperation postOperation = handlePostIncDec(opcodeObject, opcodeInfo);
-            if (postOperation != null) {
-                opcodeObject.addOp(new ApplyResult(
-                        postOperation::getResult, DataType.R16, "HL"
-                ));
-            }
+            handlePostIncDec(opcodeObject, opcodeInfo);
         }
         opcodeObject.setCyclesConsumed(1 + calculateCycles(opcodeObject));
         return opcodeObject;
@@ -97,9 +93,9 @@ public class OpcodeBuilder {
                 opcodeObject.addOp(new ReadImmediate8bit(opcodeObject::setDestinationValue));
                 opcodeObject.addOp(new ReadImmediate8bit(opcodeObject::setSourceValue));
                 opcodeObject.addOp(
-                        new FlipBytes(
+                        new MergeOperands(
                                 opcodeObject::getDestinationValue, opcodeObject::getSourceValue,
-                                opcodeObject::setSourceValue)
+                                opcodeObject::setDestinationValue)
                 );
                 break;
             case "A":
@@ -110,6 +106,8 @@ public class OpcodeBuilder {
             case "E":
             case "H":
             case "L":
+                opcodeObject.setDestinationType(DataType.R8);
+                break;
             case "AF":
             case "BC":
             case "DE":
@@ -120,6 +118,7 @@ public class OpcodeBuilder {
             case "PC":
                 //If not an immediate value, read the address held in a 16-bit register
                 if (!d.isImmediate()) {
+                    opcodeObject.setDestinationType(DataType.N16);
                     opcodeObject.addOp(new ReadRegister16Bit(opcodeObject::setDestinationValue, d.getName()));
                 } else {
                     //This is a register. Set opcodeObject.destinationValue to the value held in that register
@@ -222,35 +221,33 @@ public class OpcodeBuilder {
         }
     }
 
-    private MicroOperation buildOpsFromMnemonics(Opcode opcodeObject, OpcodeInfo opcodeInfo) {
+    private void buildOpsFromMnemonics(Opcode opcodeObject, OpcodeInfo opcodeInfo) {
         String m = opcodeInfo.getMnemonic();
-        return switch (m) {
+        switch (m) {
             //ALU operations
             case "ADC" -> opcodeObject.addOp(
-                    new AluOperation(AluOperation.Type.ADC, opcodeObject::getDestinationValue, opcodeObject::getSourceValue)
+                    new AluOperation(AluOperation.Type.ADC, opcodeObject, opcodeObject::getDestinationValue, opcodeObject::getSourceValue)
             );
             case "ADD" -> {
                 boolean is16Bit = opcodeObject.getDestinationType() == DataType.R16 || opcodeObject.getDestinationType() == DataType.N16;
-                yield opcodeObject.addOp(
-                        new AluOperation(AluOperation.Type.ADD, opcodeObject::getDestinationValue, opcodeObject::getSourceValue,
-                                is16Bit)
+                opcodeObject.addOp(
+                        new AluOperation(AluOperation.Type.ADD, opcodeObject, opcodeObject::getDestinationValue, opcodeObject::getSourceValue)
                 );
             }
             case "CP" -> opcodeObject.addOp(
-                    new AluOperation(AluOperation.Type.CP, opcodeObject::getDestinationValue, opcodeObject::getSourceValue)
+                    new AluOperation(AluOperation.Type.CP, opcodeObject, opcodeObject::getDestinationValue, opcodeObject::getSourceValue)
             );
             case "DEC" -> opcodeObject.addOp(
-                    new AluOperation(AluOperation.Type.DEC, opcodeObject::getDestinationValue, opcodeObject::getSourceValue)
+                    new AluOperation(AluOperation.Type.DEC, opcodeObject, opcodeObject::getDestinationValue, opcodeObject::getSourceValue)
             );
             case "INC" -> opcodeObject.addOp(
-                    new AluOperation(AluOperation.Type.INC, opcodeObject::getDestinationValue, opcodeObject::getSourceValue,
-                            opcodeObject.getDestinationOperandString())
+                    new AluOperation(AluOperation.Type.INC, opcodeObject, opcodeObject::getDestinationValue, opcodeObject::getSourceValue)
             );
             case "SBC" -> opcodeObject.addOp(
-                    new AluOperation(AluOperation.Type.SBC, opcodeObject::getDestinationValue, opcodeObject::getSourceValue)
+                    new AluOperation(AluOperation.Type.SBC, opcodeObject, opcodeObject::getDestinationValue, opcodeObject::getSourceValue)
             );
             case "SUB" -> opcodeObject.addOp(
-                    new AluOperation(AluOperation.Type.SUB, opcodeObject::getDestinationValue, opcodeObject::getSourceValue)
+                    new AluOperation(AluOperation.Type.SUB, opcodeObject, opcodeObject::getDestinationValue, opcodeObject::getSourceValue)
             );
 
 
@@ -277,45 +274,33 @@ public class OpcodeBuilder {
 
             default -> {
                 opcodeObject.setUnimplError(true);
-                yield null;
             }
-        };
+        }
     }
 
-    private void applyResult(Opcode opcodeObject, MicroOperation operation) {
-        opcodeObject.addOp(
-                new ApplyResult(operation::getResult, opcodeObject.getDestinationType(), opcodeObject.getDestinationOperandString())
-        );
-    }
-
-    private MicroOperation handlePostIncDec(Opcode opcodeObject, OpcodeInfo opcodeInfo) {
+    private void handlePostIncDec(Opcode opcodeObject, OpcodeInfo opcodeInfo) {
         Operand[] o = opcodeInfo.getOperands();
+        checkIncDec = false;
         if (o[0].isIncrement()) {
-            checkIncDec = false;
-            return opcodeObject.addOp(
-                    new AluOperation(AluOperation.Type.INC, opcodeObject::getDestinationValue, null, true)
+            opcodeObject.addOp(
+                    new AluOperation(AluOperation.Type.INC, opcodeObject, opcodeObject::getDestinationValue, opcodeObject::getSourceValue)
             );
         } else if (o[0].isDecrement()) {
-            checkIncDec = false;
-            return opcodeObject.addOp(
-                    new AluOperation(AluOperation.Type.DEC, opcodeObject::getDestinationValue, null, true)
+            opcodeObject.addOp(
+                    new AluOperation(AluOperation.Type.DEC, opcodeObject, opcodeObject::getDestinationValue, opcodeObject::getSourceValue)
             );
         }
         if (o.length > 1) {
             if (o[1].isIncrement()) {
-                checkIncDec = false;
-                return opcodeObject.addOp(
-                        new AluOperation(AluOperation.Type.INC, null, opcodeObject::getSourceValue, true)
+                opcodeObject.addOp(
+                        new AluOperation(AluOperation.Type.INC, opcodeObject, opcodeObject::getDestinationValue, opcodeObject::getSourceValue)
                 );
             } else if (o[1].isDecrement()) {
-                checkIncDec = false;
-                return opcodeObject.addOp(
-                        new AluOperation(AluOperation.Type.DEC, null, opcodeObject::getSourceValue, true)
+                opcodeObject.addOp(
+                        new AluOperation(AluOperation.Type.DEC, opcodeObject, opcodeObject::getDestinationValue, opcodeObject::getSourceValue)
                 );
             }
         }
-        checkIncDec = false;
-        return null;
     }
 
     private int calculateCycles(Opcode opcodeObject) {

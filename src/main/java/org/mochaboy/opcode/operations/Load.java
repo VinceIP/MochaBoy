@@ -26,18 +26,26 @@ public class Load implements MicroOperation {
         if (sourceType == DataType.R8 || sourceType == DataType.R16) {
             source = r.getByName(ss); //Pull the source value from a register
         } else {
-            //If ss is a register but not immediate, or explicitly "a8", "n8", "n16", we expect a source value
+            //If ss is a register but not immediate, or explicitly "a8", "n8", "n16", we expect a source value to be in the opcode
             source = opcode.getSourceValue();
         }
-
         //Store in destination
-        if (Registers.isValidRegister(cpu, ds) && opcode.getDestinationOperand().isImmediate()) { //If destination is a register
-            source = (ds.length() > 1) ? source & 0xFFFF : source & 0xFF; //Mask for 16 or 8 bits
-            r.setByName(ds, source);
-        } else {
-            memory.writeByte(opcode.getDestinationValue(), source & 0xFF);
-        }
+        switch (destinationType) {
+            //Writes to registers
+            case R8, R16 -> {
+                if (Registers.isValidRegister(cpu, ds)) r.setByName(ds, source);
+            }
+            //Writes to memory
+            case A8 -> {
+                memory.writeByte(opcode.getDestinationValue(), source);
+            }
+            case N16 -> {
+                int addr = opcode.getDestinationValue();
+                memory.writeByte(addr, source & 0xFF);
+                memory.writeByte(addr + 1, (source >> 8) & 0xFF);
+            }
 
+        }
         return this;
     }
 

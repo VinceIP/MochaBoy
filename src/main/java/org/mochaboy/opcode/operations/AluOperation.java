@@ -1,7 +1,9 @@
 package org.mochaboy.opcode.operations;
 
 import org.mochaboy.CPU;
+import org.mochaboy.DataType;
 import org.mochaboy.Memory;
+import org.mochaboy.opcode.Opcode;
 import org.mochaboy.registers.Registers;
 
 import java.util.function.Supplier;
@@ -13,31 +15,19 @@ public class AluOperation implements MicroOperation {
     private final Type type;
     private int result;
     private boolean is16BitOperation;
-    private String destinationRegister = "A";
+    private Opcode opcode;
 
     public AluOperation(Type type, Supplier<Integer> destinationValue) {
         this.type = type;
         this.destinationValue = destinationValue;
     }
 
-    public AluOperation(Type type, Supplier<Integer> destinationValue, Supplier<Integer> sourceValue) {
+    public AluOperation(Type type, Opcode opcode, Supplier<Integer> destinationValue, Supplier<Integer> sourceValue) {
         this.type = type;
+        this.opcode = opcode;
         this.destinationValue = destinationValue;
         this.sourceValue = sourceValue;
-    }
-
-    public AluOperation(Type type, Supplier<Integer> destinationValue, Supplier<Integer> sourceValue, String destinationRegister) {
-        this.type = type;
-        this.destinationValue = destinationValue;
-        this.sourceValue = sourceValue;
-        this.destinationRegister = destinationRegister;
-    }
-
-    public AluOperation(Type type, Supplier<Integer> destinationValue, Supplier<Integer> sourceValue, boolean is16BitOperation) {
-        this.type = type;
-        this.destinationValue = destinationValue;
-        this.sourceValue = sourceValue;
-        this.is16BitOperation = is16BitOperation;
+        is16BitOperation = (opcode.getDestinationType().equals(DataType.R16) || opcode.getDestinationType().equals(DataType.N16));
     }
 
 
@@ -56,6 +46,7 @@ public class AluOperation implements MicroOperation {
             case SBC -> result = sbc(cpu, x, y);
             case SUB -> result = sub(x, y);
         }
+        applyResult(cpu);
         return this;
     }
 
@@ -95,6 +86,21 @@ public class AluOperation implements MicroOperation {
     @Override
     public int getResult() {
         return result;
+    }
+
+    public void applyResult(CPU cpu) {
+        DataType dt = opcode.getDestinationType();
+        String destinationRegister = opcode.getDestinationOperandString();
+        if (dt == DataType.N16) {
+            //Writes result to memory for INC [HL], DEC [HL]
+            int addr = opcode.getDestinationValue();
+            cpu.getMemory().writeByte(addr, result & 0xFF);
+            cpu.getMemory().writeByte(addr + 1, (result >> 8) & 0xFF);
+        } else {
+            if (Registers.isValidRegister(cpu, destinationRegister)) {
+                cpu.getRegisters().setByName(destinationRegister, result);
+            }
+        }
     }
 
     public enum Type {
