@@ -25,7 +25,7 @@ public class OpcodeBuilder {
                 opcodeWrapper.getCbprefixed().get(hexKey) : opcodeWrapper.getUnprefixed().get(hexKey);
         opcodeObject.setOpcodeInfo(opcodeInfo);
 
-        if(opcodeObject.getFetchedAt() == 0x13){
+        if (opcodeObject.getFetchedAt() == 0x13) {
             System.out.printf("");
         }
 
@@ -283,21 +283,21 @@ public class OpcodeBuilder {
         checkIncDec = false;
         if (o[0].isIncrement()) {
             opcodeObject.addOp(
-                    new AluOperation(AluOperation.Type.INC, opcodeObject, opcodeObject::getDestinationValue, opcodeObject::getSourceValue)
+                    new AluOperation(AluOperation.Type.POST_INC, opcodeObject, opcodeObject::getDestinationValue, opcodeObject::getSourceValue)
             );
         } else if (o[0].isDecrement()) {
             opcodeObject.addOp(
-                    new AluOperation(AluOperation.Type.DEC, opcodeObject, opcodeObject::getDestinationValue, opcodeObject::getSourceValue)
+                    new AluOperation(AluOperation.Type.POST_DEC, opcodeObject, opcodeObject::getDestinationValue, opcodeObject::getSourceValue)
             );
         }
         if (o.length > 1) {
             if (o[1].isIncrement()) {
                 opcodeObject.addOp(
-                        new AluOperation(AluOperation.Type.INC, opcodeObject, opcodeObject::getDestinationValue, opcodeObject::getSourceValue)
+                        new AluOperation(AluOperation.Type.POST_INC, opcodeObject, opcodeObject::getDestinationValue, opcodeObject::getSourceValue)
                 );
             } else if (o[1].isDecrement()) {
                 opcodeObject.addOp(
-                        new AluOperation(AluOperation.Type.DEC, opcodeObject, opcodeObject::getDestinationValue, opcodeObject::getSourceValue)
+                        new AluOperation(AluOperation.Type.POST_DEC, opcodeObject, opcodeObject::getDestinationValue, opcodeObject::getSourceValue)
                 );
             }
         }

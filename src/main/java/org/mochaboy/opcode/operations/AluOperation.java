@@ -45,6 +45,16 @@ public class AluOperation implements MicroOperation {
             case INC -> result = inc(x);
             case SBC -> result = sbc(cpu, x, y);
             case SUB -> result = sub(x, y);
+            case POST_DEC -> {
+                Registers r = cpu.getRegisters();
+                int val = (r.getHL() - 1) & 0xFFFF;
+                r.setByName("HL", val);
+            }
+            case POST_INC -> {
+                Registers r = cpu.getRegisters();
+                int val = (r.getHL() + 1) & 0xFFFF;
+                r.setByName("HL", val);
+            }
         }
         applyResult(cpu);
         return this;
@@ -110,6 +120,8 @@ public class AluOperation implements MicroOperation {
         DEC,
         INC,
         SBC,
-        SUB
+        SUB,
+        POST_INC,
+        POST_DEC
     }
 }
