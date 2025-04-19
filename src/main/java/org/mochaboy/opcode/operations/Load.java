@@ -37,12 +37,14 @@ public class Load implements MicroOperation {
             }
             //Writes to memory
             case A8 -> {
-                memory.writeByte(opcode.getDestinationValue(), source);
+                int addr = 0xFF00 | opcode.getDestinationValue();
+                memory.writeByte(addr, source);
             }
             case N16 -> {
                 int addr = opcode.getDestinationValue();
                 memory.writeByte(addr, source & 0xFF);
-                memory.writeByte(addr + 1, (source >> 8) & 0xFF);
+                if (sourceType == DataType.R16)
+                    memory.writeByte(addr + 1, (source >> 8) & 0xFF);
             }
 
         }

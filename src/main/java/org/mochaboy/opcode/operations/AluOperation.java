@@ -49,11 +49,13 @@ public class AluOperation implements MicroOperation {
                 Registers r = cpu.getRegisters();
                 int val = (r.getHL() - 1) & 0xFFFF;
                 r.setByName("HL", val);
+                return this; //Exit early
             }
             case POST_INC -> {
                 Registers r = cpu.getRegisters();
                 int val = (r.getHL() + 1) & 0xFFFF;
                 r.setByName("HL", val);
+                return this; //Exit early
             }
         }
         applyResult(cpu);

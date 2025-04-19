@@ -70,7 +70,7 @@ public class OpcodeBuilder {
 
         //Handle source operand
         if (s != null) {
-            handleSourceOperand(opcodeObject, s);
+            handleSourceOperand(opcodeObject, s, opcodeInfo);
         }
 
     }
@@ -106,7 +106,18 @@ public class OpcodeBuilder {
             case "E":
             case "H":
             case "L":
-                opcodeObject.setDestinationType(DataType.R8);
+                if (!d.isImmediate()) {
+                    //If it's an 8b register and not immediate, it must be LD [C], A
+                    opcodeObject.setDestinationType(DataType.A8);
+                    opcodeObject.addOp(
+                            new ReadRegister8Bit(opcodeObject::setDestinationValue, "C")
+                    );
+                } else {
+                    opcodeObject.setDestinationType(DataType.R8);
+                    opcodeObject.addOp(
+                            new ReadRegister8Bit(opcodeObject::setDestinationValue, d.getName())
+                    );
+                }
                 break;
             case "AF":
             case "BC":
@@ -122,15 +133,9 @@ public class OpcodeBuilder {
                     opcodeObject.addOp(new ReadRegister16Bit(opcodeObject::setDestinationValue, d.getName()));
                 } else {
                     //This is a register. Set opcodeObject.destinationValue to the value held in that register
-                    if (d.getName().length() > 1) { //If register has 2 chars its 16 bit
-                        opcodeObject.setDestinationType(DataType.R16);
-                        opcodeObject.addOp(
-                                new ReadRegister16Bit(opcodeObject::setDestinationValue, d.getName()));
-                    } else {
-                        opcodeObject.setDestinationType(DataType.R16);
-                        opcodeObject.addOp(
-                                new ReadRegister8Bit(opcodeObject::setDestinationValue, d.getName()));
-                    }
+                    opcodeObject.setDestinationType(DataType.R16);
+                    opcodeObject.addOp(
+                            new ReadRegister16Bit(opcodeObject::setDestinationValue, d.getName()));
                 }
                 break;
             //RES - set bit u3 to 0 in r8 or [HL], so make this operand2 (source)
@@ -146,7 +151,7 @@ public class OpcodeBuilder {
 
     }
 
-    private void handleSourceOperand(Opcode opcodeObject, Operand s) {
+    private void handleSourceOperand(Opcode opcodeObject, Operand s, OpcodeInfo opcodeInfo) {
         opcodeObject.setSourceOperandString(s.getName());
         opcodeObject.setSourceOperand(s);
         switch (s.getName()) {
@@ -200,7 +205,11 @@ public class OpcodeBuilder {
             case "H":
             case "L":
                 opcodeObject.setSourceType(DataType.R8);
-                opcodeObject.addOp(new ReadRegister8Bit(opcodeObject::setSourceValue, s.getName()));
+                String m = opcodeInfo.getMnemonic();
+                //Stupid check to make sure INC and DEC get handled correctly. Trust me
+                if (m.equals("INC") || m.equals("DEC")) {
+                    opcodeObject.addOp(new ReadRegister8Bit(opcodeObject::setDestinationValue, s.getName()));
+                } else opcodeObject.addOp(new ReadRegister8Bit(opcodeObject::setSourceValue, s.getName()));
                 break;
             case "AF":
             case "BC":

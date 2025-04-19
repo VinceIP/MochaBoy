@@ -76,6 +76,8 @@ public class Memory {
         value = value & 0xFF;
         address = address & 0xFFFF;
 
+        System.out.printf("Writing byte %02X at address %04X\n", value, address);
+
         //Prohibit writes to ROM space.
         //TODO: Implement MBC detection and bank switching here
         if (address < 0x8000) {
