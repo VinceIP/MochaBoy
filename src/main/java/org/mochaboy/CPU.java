@@ -188,7 +188,9 @@ public class CPU extends Thread {
                 fetch();
                 if (opcode != 0xCB) {
                     state = State.DECODE_AND_EXECUTE;
-                } else fetchedCb = true;
+                } else {
+                    fetchedCb = true;
+                }
                 break;
             case DECODE_AND_EXECUTE:
                 if (!built) {
@@ -201,7 +203,7 @@ public class CPU extends Thread {
                         currentOpcodeObject.setOperationsRemaining(false);
                     }
                 }
-                if(registers.getPC() == 0x14){
+                if (registers.getPC() == 0x14) {
                     System.out.printf("");
                 }
                 if (currentOpcodeObject.hasOperationsRemaining()) { //If this opcode still has work to do

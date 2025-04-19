@@ -25,10 +25,6 @@ public class OpcodeBuilder {
                 opcodeWrapper.getCbprefixed().get(hexKey) : opcodeWrapper.getUnprefixed().get(hexKey);
         opcodeObject.setOpcodeInfo(opcodeInfo);
 
-        if (opcodeObject.getFetchedAt() == 0x13) {
-            System.out.printf("");
-        }
-
         //Build opcode
         buildMicroOpsFromOperands(opcodeObject, opcodeInfo);
         buildOpsFromMnemonics(opcodeObject, opcodeInfo);
@@ -109,15 +105,12 @@ public class OpcodeBuilder {
                 if (!d.isImmediate()) {
                     //If it's an 8b register and not immediate, it must be LD [C], A
                     opcodeObject.setDestinationType(DataType.A8);
-                    opcodeObject.addOp(
-                            new ReadRegister8Bit(opcodeObject::setDestinationValue, "C")
-                    );
                 } else {
                     opcodeObject.setDestinationType(DataType.R8);
-                    opcodeObject.addOp(
-                            new ReadRegister8Bit(opcodeObject::setDestinationValue, d.getName())
-                    );
                 }
+                opcodeObject.addOp(
+                        new ReadRegister8Bit(opcodeObject::setDestinationValue, d.getName())
+                );
                 break;
             case "AF":
             case "BC":
@@ -138,9 +131,10 @@ public class OpcodeBuilder {
                             new ReadRegister16Bit(opcodeObject::setDestinationValue, d.getName()));
                 }
                 break;
-            //RES - set bit u3 to 0 in r8 or [HL], so make this operand2 (source)
+            //RES - set bit u3 to 0 in r8 or [HL]
             //BIT - test bit u3 in r8
-            case "0", "1", "2", "3", "4", "5", "6", "7":
+            case "0","1","2","3","4","5","6","7","8","9":
+                opcodeObject.setDestinationValue(Integer.parseInt(d.getName()));
                 break;
             case "Z":
             case "NZ":
@@ -280,6 +274,16 @@ public class OpcodeBuilder {
             );
 
             //Bit flag operations
+            case "BIT" -> {
+                System.out.printf("");
+            } //Changes no values, is implied in FlagCalculator
+            case "RES" -> opcodeObject.addOp(
+                    new BitFlagOperation(BitFlagOperation.Type.RES, opcodeObject, opcodeObject::getDestinationValue, opcodeObject::getSourceValue)
+            );
+            case "SET" -> opcodeObject.addOp(
+                    new BitFlagOperation(BitFlagOperation.Type.SET, opcodeObject, opcodeObject::getDestinationValue, opcodeObject::getSourceValue)
+            );
+
 
             default -> {
                 opcodeObject.setUnimplError(true);
