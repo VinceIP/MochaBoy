@@ -13,7 +13,7 @@ public class BitShiftOperation implements MicroOperation {
     private final Opcode opcode;
     private int result;
 
-    public BitShiftOperation(Type type, Supplier<Integer> targetValue, Opcode opcode) {
+    public BitShiftOperation(Type type, Opcode opcode, Supplier<Integer> targetValue) {
         this.type = type;
         this.targetValue = targetValue;
         this.opcode = opcode;

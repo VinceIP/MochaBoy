@@ -5,5 +5,6 @@ public enum DataType {
     R16,
     N16,
     A8,
+    E8,
     MEMORY
 }

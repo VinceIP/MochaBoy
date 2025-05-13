@@ -37,6 +37,8 @@ public class OpcodeBuilder {
         if (checkIncDec) {
             handlePostIncDec(opcodeObject, opcodeInfo);
         }
+
+        //
         opcodeObject.setCyclesConsumed(1 + calculateCycles(opcodeObject));
 
         return opcodeObject;
@@ -70,6 +72,16 @@ public class OpcodeBuilder {
             handleSourceOperand(opcodeObject, s, opcodeInfo);
         }
 
+        if (operands.length > 2) {
+            //This must be LD HL, SP+e8
+            opcodeObject.addOp(
+                    new ReadImmediate8bit(opcodeObject::setExtraValue)
+            );
+            opcodeObject.addOp(
+                    new EmptyCycle() //Because this opcode needs 3 cycles
+            );
+        }
+
     }
 
     private void handleDestinationOperand(Opcode opcodeObject, Operand d) {
@@ -86,6 +98,8 @@ public class OpcodeBuilder {
             case "a16":
                 //This is an address
                 //2 cycles to read 16-bit address
+                //Gets the low and high bytes, stores them temporarily in the opcode's dest and source values,
+                //then merges them together to be stored in dest value. Source val is overwritten later.
                 opcodeObject.setDestinationType(DataType.N16);
                 opcodeObject.addOp(new ReadImmediate8bit(opcodeObject::setDestinationValue));
                 opcodeObject.addOp(new ReadImmediate8bit(opcodeObject::setSourceValue));
@@ -98,7 +112,16 @@ public class OpcodeBuilder {
             case "A":
             case "B":
             case "C":
-                opcodeObject.setCc("C"); //Carry condition, or register C
+                //Operand C could refer to register C, or flag condition cc, depending on the mnemonic
+                //Explicitly set a condition if so and break
+                OpcodeInfo o = opcodeObject.getOpcodeInfo();
+                if (o.getMnemonic().equals("CALL")
+                        || o.getMnemonic().equals("JP")
+                        || o.getMnemonic().equals("JR")
+                        || o.getMnemonic().equals("RET")) {
+                    opcodeObject.setCc("C");
+                    break;
+                }
             case "D":
             case "E":
             case "H":
@@ -134,7 +157,7 @@ public class OpcodeBuilder {
                 break;
             //RES - set bit u3 to 0 in r8 or [HL]
             //BIT - test bit u3 in r8
-            case "0","1","2","3","4","5","6","7","8","9":
+            case "0", "1", "2", "3", "4", "5", "6", "7", "8", "9":
                 opcodeObject.setDestinationValue(Integer.parseInt(d.getName()));
                 break;
             case "Z":
@@ -192,6 +215,11 @@ public class OpcodeBuilder {
                                 opcodeObject::getDestinationValue, opcodeObject::getSourceValue, opcodeObject::setDestinationValue)
                 );
                 break;
+            case "e8":
+                opcodeObject.setSourceType(DataType.E8);
+                opcodeObject.addOp(new ReadImmediate8bit(opcodeObject::setSourceValue));
+                opcodeObject.addOp(new EmptyCycle()); //To make sure ADD SP, e8 takes 4 cycles
+                break;
             case "A":
             case "B":
             case "C":
@@ -213,14 +241,10 @@ public class OpcodeBuilder {
                 if (s.isIncrement() || s.isDecrement()) checkIncDec = true;
             case "SP":
             case "PC":
-                //If not an immediate value, read the byte stored at memory pointed to by this register
-                if (!s.isImmediate()) {
-                    opcodeObject.addOp(
-                            new ReadMemory8Bits(opcodeObject::setSourceValue, s.getName())
-                    );
-                } else {
-                    opcodeObject.addOp(new ReadRegister16Bit(opcodeObject::setSourceValue, s.getName()));
-                }
+                opcodeObject.setSourceType(DataType.R16);
+                opcodeObject.addOp(
+                        new ReadRegister16Bit(opcodeObject::setSourceValue, s.getName())
+                );
                 break;
         }
     }
@@ -233,7 +257,6 @@ public class OpcodeBuilder {
                     new AluOperation(AluOperation.Type.ADC, opcodeObject, opcodeObject::getDestinationValue, opcodeObject::getSourceValue)
             );
             case "ADD" -> {
-                boolean is16Bit = opcodeObject.getDestinationType() == DataType.R16 || opcodeObject.getDestinationType() == DataType.N16;
                 opcodeObject.addOp(
                         new AluOperation(AluOperation.Type.ADD, opcodeObject, opcodeObject::getDestinationValue, opcodeObject::getSourceValue)
                 );
@@ -256,9 +279,27 @@ public class OpcodeBuilder {
 
 
             //LD Operations
-            case "LD", "LDH" -> opcodeObject.addOp(
-                    new Load(opcodeObject)
-            );
+            case "LD", "LDH" -> {
+                // special‑case opcode 0x08 :  LD (a16),SP
+                if (opcodeObject.getOpcodeInfo().getOpcode() == 0x08) {
+                    //Write a 16 bits at address a16, one byte at a time per cycle
+                    opcodeObject.addOp(
+                            new WriteMemory8Bit(
+                                    opcodeObject::getDestinationValue,
+                                    () -> opcodeObject.getSourceValue() & 0x00FF
+                            )
+                    );
+
+                    opcodeObject.addOp(
+                            new WriteMemory8Bit(
+                                    () -> (opcodeObject.getDestinationValue() + 1) & 0xFFFF,
+                                    () -> (opcodeObject.getSourceValue() >>> 8) & 0x00FF
+                            )
+                    );
+                } else {
+                    opcodeObject.addOp(new Load(opcodeObject));
+                }
+            }
 
             //Bitwise operations
             case "AND" -> opcodeObject.addOp(
@@ -286,6 +327,54 @@ public class OpcodeBuilder {
             );
 
             //Bit shift operations
+            case "RL" -> {
+                new BitShiftOperation(BitShiftOperation.Type.RL, opcodeObject, opcodeObject::getDestinationValue);
+            }
+            case "RLA" -> {
+                new BitShiftOperation(BitShiftOperation.Type.RLA, opcodeObject, opcodeObject::getDestinationValue);
+            }
+            case "RLC" -> {
+                new BitShiftOperation(BitShiftOperation.Type.RLC, opcodeObject, opcodeObject::getDestinationValue);
+            }
+            case "RLCA" -> {
+                new BitShiftOperation(BitShiftOperation.Type.RLCA, opcodeObject, opcodeObject::getDestinationValue);
+            }
+            case "RR" -> {
+                new BitShiftOperation(BitShiftOperation.Type.RR, opcodeObject, opcodeObject::getDestinationValue);
+            }
+            case "RRA" -> {
+                new BitShiftOperation(BitShiftOperation.Type.RRA, opcodeObject, opcodeObject::getDestinationValue);
+            }
+            case "RRC" -> {
+                new BitShiftOperation(BitShiftOperation.Type.RRC, opcodeObject, opcodeObject::getDestinationValue);
+            }
+            case "RRCA" -> {
+                new BitShiftOperation(BitShiftOperation.Type.RRCA, opcodeObject, opcodeObject::getDestinationValue);
+            }
+            case "SLA" -> {
+                new BitShiftOperation(BitShiftOperation.Type.SLA, opcodeObject, opcodeObject::getDestinationValue);
+            }
+            case "SRA" -> {
+                new BitShiftOperation(BitShiftOperation.Type.SRA, opcodeObject, opcodeObject::getDestinationValue);
+            }
+            case "SRL" -> {
+                new BitShiftOperation(BitShiftOperation.Type.SRL, opcodeObject, opcodeObject::getDestinationValue);
+            }
+            case "SWAP" -> {
+                new BitShiftOperation(BitShiftOperation.Type.SWAP, opcodeObject, opcodeObject::getDestinationValue);
+            }
+
+            //Subroutine instructions
+
+            //Carry flag instructions
+            case "CCF" -> {
+                //Pure flag calculation
+            }
+            case "SCF" -> {
+                //Pure flag calculation
+            }
+
+            //Stack instructions
 
 
             default -> {

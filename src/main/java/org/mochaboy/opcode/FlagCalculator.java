@@ -26,10 +26,10 @@ public class FlagCalculator {
             switch (operands[1].getName()) {
                 //Immediate 8-bit values
                 case "e8":
-                    int lowerByte = xVal & 0xFF;
-                    int e8 = yVal & 0xFF;
-                    conditions.isHalfCarry = (((xVal & 0x0FFF) + (yVal & 0x0FFF)) & 0x1000) != 0;
-                    conditions.isCarry = lowerByte + e8 > 0xFF;
+                    int lowSp = xVal & 0x00FF;
+                    int e8 = yVal & 0x00FF;
+                    conditions.isHalfCarry = ((lowSp & 0x0F) + (e8 & 0x0F)) > 0x0F;
+                    conditions.isCarry = (lowSp + e8) > 0xFF;
                     break;
                 //values of any 16-bit register
                 case "AF":
@@ -38,7 +38,7 @@ public class FlagCalculator {
                 case "HL":
                 case "SP":
                 case "PC":
-                    conditions.isZero = ((xVal + yVal) & 0xFF) == 0;
+                    //conditions.isZero = ((xVal + yVal) & 0xFF) == 0;
                     conditions.isHalfCarry = (((xVal & 0x0FFF) + (yVal & 0x0FFF)) & 0x1000) != 0;
                     conditions.isCarry = ((xVal & 0xFFFF) + (yVal & 0xFFFF)) > 0xFFFF;
                     break;
@@ -118,7 +118,7 @@ public class FlagCalculator {
 
         calculators.put("RL", (cpu, xVal, yVal, operands) -> {
             FlagConditions conditions = new FlagConditions();
-            int carryIn = cpu.getRegisters().isFlagSet(Registers.FLAG_CARRY)? 1:0;
+            int carryIn = cpu.getRegisters().isFlagSet(Registers.FLAG_CARRY) ? 1 : 0;
             int carryOut = (xVal >> 7) & 1;
             xVal = ((xVal << 1) | carryIn) & 0xFF;
             conditions.isZero = (xVal == 0);
@@ -261,6 +261,13 @@ public class FlagCalculator {
                 return conditions;
             }
         });
+
+        calculators.put("CCF", (cpu, xVal, yVal, operands) -> {
+            FlagConditions conditions = new FlagConditions();
+            conditions.isCarry = (!cpu.getRegisters().isFlagSet(Registers.FLAG_CARRY));
+            return conditions;
+        });
+
 
         calculators.put("LDH", (cpu, xVal, yVal, operands) -> {
             return new FlagConditions();

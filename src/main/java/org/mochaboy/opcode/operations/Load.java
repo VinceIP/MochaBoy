@@ -33,6 +33,13 @@ public class Load implements MicroOperation {
         switch (destinationType) {
             //Writes to registers
             case R8, R16 -> {
+                //Special case LD HL, SP+e8
+                if (opcode.getOpcodeInfo().getOpcode() == 0xF8) {
+                    //Get e8, extend it, then add to source (SP) and mask to 16 bits
+                    int e8 = opcode.getExtraValue();
+                    e8 = (e8 << 24) >> 24;
+                    source = ((source + e8) & 0xFFFF);
+                }
                 if (Registers.isValidRegister(cpu, ds)) r.setByName(ds, source);
             }
             //Writes to memory

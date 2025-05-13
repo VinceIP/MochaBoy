@@ -4,6 +4,7 @@ import org.mochaboy.CPU;
 import org.mochaboy.DataType;
 import org.mochaboy.Memory;
 import org.mochaboy.opcode.Opcode;
+import org.mochaboy.opcode.OpcodeInfo;
 import org.mochaboy.registers.Registers;
 
 import java.util.function.Supplier;
@@ -68,7 +69,14 @@ public class AluOperation implements MicroOperation {
     }
 
     private int add(int x, int y) {
-        return (x + y) & (is16BitOperation ? 0xFFFF : 0xFF);
+        OpcodeInfo o = opcode.getOpcodeInfo();
+        if (o.getOperands().length > 1 && o.getOperands()[1].getName().equals("e8")) { //If this is ADD SP, e8
+            int signedDisp = (y << 24) >> 24; //Extend e8 to 32 bits
+            return (x + signedDisp) & 0xFFFF;
+        } else {
+            return (x + y) & (is16BitOperation ? 0xFFFF : 0xFF);
+
+        }
     }
 
     private int inc(int x) {
