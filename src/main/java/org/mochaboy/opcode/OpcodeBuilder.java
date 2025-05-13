@@ -410,7 +410,15 @@ public class OpcodeBuilder {
             }
 
             case "PUSH" -> {
-
+                opcodeObject.addOp(new EmptyCycle());
+                opcodeObject.addOp(new StackOperation(
+                        StackOperation.Type.PUSH_HIGH, opcodeObject,
+                        () -> cpu.getRegisters().getByName(opcodeObject.getDestinationOperandString())
+                ));
+                opcodeObject.addOp(new StackOperation(
+                        StackOperation.Type.PUSH_LOW, opcodeObject,
+                        () -> cpu.getRegisters().getByName(opcodeObject.getDestinationOperandString())
+                ));
             }
 
             default -> {
