@@ -289,7 +289,6 @@ public class OpcodeBuilder {
                                     () -> opcodeObject.getSourceValue() & 0x00FF
                             )
                     );
-
                     opcodeObject.addOp(
                             new WriteMemory8Bit(
                                     () -> (opcodeObject.getDestinationValue() + 1) & 0xFFFF,
@@ -328,40 +327,64 @@ public class OpcodeBuilder {
 
             //Bit shift operations
             case "RL" -> {
-                new BitShiftOperation(BitShiftOperation.Type.RL, opcodeObject, opcodeObject::getDestinationValue);
+                opcodeObject.addOp(
+                        new BitShiftOperation(BitShiftOperation.Type.RL, opcodeObject, opcodeObject::getDestinationValue)
+                );
             }
             case "RLA" -> {
-                new BitShiftOperation(BitShiftOperation.Type.RLA, opcodeObject, opcodeObject::getDestinationValue);
+                opcodeObject.addOp(
+                        new BitShiftOperation(BitShiftOperation.Type.RLA, opcodeObject, opcodeObject::getDestinationValue)
+                );
             }
             case "RLC" -> {
-                new BitShiftOperation(BitShiftOperation.Type.RLC, opcodeObject, opcodeObject::getDestinationValue);
+                opcodeObject.addOp(
+                        new BitShiftOperation(BitShiftOperation.Type.RLC, opcodeObject, opcodeObject::getDestinationValue)
+                );
             }
             case "RLCA" -> {
-                new BitShiftOperation(BitShiftOperation.Type.RLCA, opcodeObject, opcodeObject::getDestinationValue);
+                opcodeObject.addOp(
+                        new BitShiftOperation(BitShiftOperation.Type.RLCA, opcodeObject, opcodeObject::getDestinationValue)
+                );
             }
             case "RR" -> {
-                new BitShiftOperation(BitShiftOperation.Type.RR, opcodeObject, opcodeObject::getDestinationValue);
+                opcodeObject.addOp(
+                        new BitShiftOperation(BitShiftOperation.Type.RR, opcodeObject, opcodeObject::getDestinationValue)
+                );
             }
             case "RRA" -> {
-                new BitShiftOperation(BitShiftOperation.Type.RRA, opcodeObject, opcodeObject::getDestinationValue);
+                opcodeObject.addOp(
+                        new BitShiftOperation(BitShiftOperation.Type.RRA, opcodeObject, opcodeObject::getDestinationValue)
+                );
             }
             case "RRC" -> {
-                new BitShiftOperation(BitShiftOperation.Type.RRC, opcodeObject, opcodeObject::getDestinationValue);
+                opcodeObject.addOp(
+                        new BitShiftOperation(BitShiftOperation.Type.RRC, opcodeObject, opcodeObject::getDestinationValue)
+                );
             }
             case "RRCA" -> {
-                new BitShiftOperation(BitShiftOperation.Type.RRCA, opcodeObject, opcodeObject::getDestinationValue);
+                opcodeObject.addOp(
+                        new BitShiftOperation(BitShiftOperation.Type.RRCA, opcodeObject, opcodeObject::getDestinationValue)
+                );
             }
             case "SLA" -> {
-                new BitShiftOperation(BitShiftOperation.Type.SLA, opcodeObject, opcodeObject::getDestinationValue);
+                opcodeObject.addOp(
+                        new BitShiftOperation(BitShiftOperation.Type.SLA, opcodeObject, opcodeObject::getDestinationValue)
+                );
             }
             case "SRA" -> {
-                new BitShiftOperation(BitShiftOperation.Type.SRA, opcodeObject, opcodeObject::getDestinationValue);
+                opcodeObject.addOp(
+                        new BitShiftOperation(BitShiftOperation.Type.SRA, opcodeObject, opcodeObject::getDestinationValue)
+                );
             }
             case "SRL" -> {
-                new BitShiftOperation(BitShiftOperation.Type.SRL, opcodeObject, opcodeObject::getDestinationValue);
+                opcodeObject.addOp(
+                        new BitShiftOperation(BitShiftOperation.Type.SRL, opcodeObject, opcodeObject::getDestinationValue)
+                );
             }
             case "SWAP" -> {
-                new BitShiftOperation(BitShiftOperation.Type.SWAP, opcodeObject, opcodeObject::getDestinationValue);
+                opcodeObject.addOp(
+                        new BitShiftOperation(BitShiftOperation.Type.SWAP, opcodeObject, opcodeObject::getDestinationValue)
+                );
             }
 
             //Subroutine instructions
@@ -375,7 +398,20 @@ public class OpcodeBuilder {
             }
 
             //Stack instructions
+            case "POP" -> {
+                opcodeObject.addOp(new ReadMemory8Bit(opcodeObject::setDestinationValue, () -> cpu.getRegisters().getSP()));
+                opcodeObject.addOp(new ReadMemory8Bit(opcodeObject::setSourceValue, () -> (cpu.getRegisters().getSP() + 1) & 0xFFFF));
+                opcodeObject.addOp(
+                        new MergeOperands(opcodeObject::getDestinationValue, opcodeObject::getSourceValue, opcodeObject::setDestinationValue)
+                );
+                opcodeObject.addOp(
+                        new StackOperation(StackOperation.Type.POP, opcodeObject, opcodeObject::getDestinationValue)
+                );
+            }
 
+            case "PUSH" -> {
+
+            }
 
             default -> {
                 opcodeObject.setUnimplError(true);

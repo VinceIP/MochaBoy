@@ -62,11 +62,17 @@ public class BitShiftOperation implements MicroOperation {
     }
 
     public void applyResult(CPU cpu) {
-        if (opcode.getDestinationOperand().isImmediate()) {
-            cpu.getRegisters().setByName(opcode.getDestinationOperandString(), result);
+        String destRegister = "";
+        if (opcode.getDestinationOperand() == null) {
+            destRegister = "A";
         } else {
-            cpu.getMemory().writeByte(cpu.getRegisters().getHL(), result);
+            destRegister = opcode.getDestinationOperand().getName();
+            if (!opcode.getDestinationOperand().isImmediate()) {
+                cpu.getMemory().writeByte(cpu.getRegisters().getHL(), result);
+                return;
+            }
         }
+        cpu.getRegisters().setByName(destRegister, result);
     }
 
     @Override
