@@ -118,8 +118,11 @@ public class FlagCalculator {
 
         calculators.put("RL", (cpu, xVal, yVal, operands) -> {
             FlagConditions conditions = new FlagConditions();
+            int carryIn = cpu.getRegisters().isFlagSet(Registers.FLAG_CARRY)? 1:0;
+            int carryOut = (xVal >> 7) & 1;
+            xVal = ((xVal << 1) | carryIn) & 0xFF;
             conditions.isZero = (xVal == 0);
-            conditions.isCarry = (yVal == 1);
+            conditions.isCarry = (carryOut == 1);
             return conditions;
         });
 

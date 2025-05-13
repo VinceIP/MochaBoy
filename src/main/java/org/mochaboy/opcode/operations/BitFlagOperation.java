@@ -51,7 +51,7 @@ public class BitFlagOperation implements MicroOperation {
 
     @Override
     public int getResult() {
-        return 0;
+        return result;
     }
 
     public enum Type {

@@ -28,6 +28,7 @@ public class OpcodeBuilder {
         //Build opcode
         buildMicroOpsFromOperands(opcodeObject, opcodeInfo);
         buildOpsFromMnemonics(opcodeObject, opcodeInfo);
+
         //Queue up a flag process op
         opcodeObject.addOp(new HandleFlags(flagCalculator, cpu, opcodeInfo,
                 opcodeObject::getDestinationValue, opcodeObject::getSourceValue));
@@ -37,6 +38,7 @@ public class OpcodeBuilder {
             handlePostIncDec(opcodeObject, opcodeInfo);
         }
         opcodeObject.setCyclesConsumed(1 + calculateCycles(opcodeObject));
+
         return opcodeObject;
     }
 
@@ -52,7 +54,6 @@ public class OpcodeBuilder {
 
      */
     private void buildMicroOpsFromOperands(Opcode opcodeObject, OpcodeInfo opcodeInfo) {
-
         Operand[] operands = opcodeInfo.getOperands();
         Operand d = operands.length > 0 ? operands[0] : null;
         Operand s = operands.length > 1 ? operands[1] : null;
@@ -283,6 +284,8 @@ public class OpcodeBuilder {
             case "SET" -> opcodeObject.addOp(
                     new BitFlagOperation(BitFlagOperation.Type.SET, opcodeObject, opcodeObject::getDestinationValue, opcodeObject::getSourceValue)
             );
+
+            //Bit shift operations
 
 
             default -> {
