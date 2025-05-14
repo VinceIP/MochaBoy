@@ -203,9 +203,7 @@ public class CPU extends Thread {
                         currentOpcodeObject.setOperationsRemaining(false);
                     }
                 }
-                if (registers.getPC() == 0x14) {
-                    System.out.printf("");
-                }
+
                 if (currentOpcodeObject.hasOperationsRemaining()) { //If this opcode still has work to do
                     boolean done = false;
                     while (!done) { //Make sure we continuously execute any operations that don't consume cycles
@@ -213,7 +211,7 @@ public class CPU extends Thread {
                         MicroOperation nextOp = currentOpcodeObject.getMicroOps().peek();
                         if (nextOp == null) {
                             done = true;
-                        } else if (nextOp.getCycles() != 0) {
+                        } else if (nextOp.getCycles() != 0) { //Consume only 1 cycle per loop
                             done = true;
                         }
                     }

@@ -165,6 +165,8 @@ public class OpcodeBuilder {
             case "NC":
                 opcodeObject.setCc(d.getName()); //Other flag conditions
                 break;
+            case "$00", "$08", "$10", "$18", "$20", "$28", "$30", "$38":
+                break;
         }
 
     }
@@ -316,7 +318,6 @@ public class OpcodeBuilder {
 
             //Bit flag operations
             case "BIT" -> {
-                System.out.printf("");
             } //Changes no values, is implied in FlagCalculator
             case "RES" -> opcodeObject.addOp(
                     new BitFlagOperation(BitFlagOperation.Type.RES, opcodeObject, opcodeObject::getDestinationValue, opcodeObject::getSourceValue)
@@ -388,6 +389,163 @@ public class OpcodeBuilder {
             }
 
             //Subroutine instructions
+            case "CALL" -> {
+                //Read address target from immediate, merge, store into sourceValue of opcode
+                opcodeObject.addOp(
+                        new ReadImmediate8bit(opcodeObject::setDestinationValue));
+                opcodeObject.addOp(
+                        new ReadImmediate8bit(opcodeObject::setSourceValue));
+                opcodeObject.addOp(
+                        new MergeOperands(
+                                opcodeObject::getDestinationValue,
+                                opcodeObject::getSourceValue,
+                                opcodeObject::setSourceValue));
+
+                //Check conditions cc
+                if (opcodeObject.getCc() != null) {
+                    switch (opcodeObject.getCc()) {
+                        case "Z" -> opcodeObject.addOp(new CheckCC(CheckCC.Type.Z, opcodeObject));
+                        case "NZ" -> opcodeObject.addOp(new CheckCC(CheckCC.Type.NZ, opcodeObject));
+                        case "C" -> opcodeObject.addOp(new CheckCC(CheckCC.Type.C, opcodeObject));
+                        case "NC" -> opcodeObject.addOp(new CheckCC(CheckCC.Type.NC, opcodeObject));
+                    }
+                }
+
+                opcodeObject.addOp(new EmptyCycle());
+
+                //Push current PC onto stack
+                opcodeObject.addOp(
+                        new StackOperation(StackOperation.Type.PUSH_HIGH,
+                                opcodeObject,
+                                () -> cpu.getRegisters().getPC())
+                );
+                opcodeObject.addOp(
+                        new StackOperation(StackOperation.Type.PUSH_LOW,
+                                opcodeObject,
+                                () -> cpu.getRegisters().getPC())
+                );
+                //Set PC to target stored in sourceValue by doing LD PC, n16
+                opcodeObject.setDestinationOperandString("PC");
+                opcodeObject.setDestinationType(DataType.R16);
+                opcodeObject.setSourceOperandString("n16");
+                opcodeObject.setSourceType(DataType.N16);
+                opcodeObject.addOp(
+                        new Load(opcodeObject)
+                );
+            }
+
+            case "JP" -> {
+                String ds = opcodeObject.getDestinationOperandString();
+                if (ds.equals("HL")) {
+                    //JP HL, do imaginary LD PC HL
+                    opcodeObject.setDestinationOperandString("PC");
+                    opcodeObject.setSourceType(DataType.R16);
+                    opcodeObject.setSourceOperandString("HL");
+                    opcodeObject.addOp(new ReadRegister16Bit(opcodeObject::setSourceValue, "HL"));
+                    opcodeObject.addOp(new Load(opcodeObject));
+                } else if (ds.equals("n16") || ds.equals("Z") || ds.equals("NZ") || ds.equals("C") || ds.equals("NC")) {
+                    //JP n16/JP cc,n16, read n16 then do imaginary LD PC n16
+                    opcodeObject.addOp(new ReadImmediate8bit(opcodeObject::setDestinationValue));
+                    opcodeObject.addOp(new ReadImmediate8bit(opcodeObject::setSourceValue));
+                    opcodeObject.addOp(new MergeOperands(opcodeObject::getDestinationValue, opcodeObject::getSourceValue,
+                            opcodeObject::setSourceValue));
+                    opcodeObject.setDestinationOperandString("PC");
+                    opcodeObject.setDestinationType(DataType.R16);
+                    opcodeObject.setSourceOperandString("n16");
+                    opcodeObject.setSourceType(DataType.N16);
+                    if (opcodeObject.getCc() != null) {
+                        switch (opcodeObject.getCc()) {
+                            case "Z" -> opcodeObject.addOp(new CheckCC(CheckCC.Type.Z, opcodeObject));
+                            case "NZ" -> opcodeObject.addOp(new CheckCC(CheckCC.Type.NZ, opcodeObject));
+                            case "C" -> opcodeObject.addOp(new CheckCC(CheckCC.Type.C, opcodeObject));
+                            case "NC" -> opcodeObject.addOp(new CheckCC(CheckCC.Type.NC, opcodeObject));
+                        }
+                    }
+                    opcodeObject.addOp(new Load(opcodeObject));
+                }
+            }
+
+            case "JR" -> {
+                //Read 8-bit offset, check for conditions
+                opcodeObject.addOp(new ReadImmediate8bit(opcodeObject::setSourceValue));
+                if (opcodeObject.getCc() != null) {
+                    switch (opcodeObject.getCc()) {
+                        case "Z" -> opcodeObject.addOp(new CheckCC(CheckCC.Type.Z, opcodeObject));
+                        case "NZ" -> opcodeObject.addOp(new CheckCC(CheckCC.Type.NZ, opcodeObject));
+                        case "C" -> opcodeObject.addOp(new CheckCC(CheckCC.Type.C, opcodeObject));
+                        case "NC" -> opcodeObject.addOp(new CheckCC(CheckCC.Type.NC, opcodeObject));
+                    }
+                    //If no cc or conditions satisfied, idle once and add the offset to PC
+                    opcodeObject.addOp(new EmptyCycle());
+                    opcodeObject.setDestinationOperandString("PC");
+                    opcodeObject.setDestinationType(DataType.R16);
+                    opcodeObject.addOp(new AluOperation(
+                            AluOperation.Type.ADD,
+                            opcodeObject,
+                            () -> cpu.getRegisters().getPC(),
+                            opcodeObject::getSourceValue
+                    ));
+                }
+            }
+
+            case "RET", "RETI" -> {
+                if (opcodeObject.getCc() != null) {
+                    switch (opcodeObject.getCc()) {
+                        case "Z" -> opcodeObject.addOp(new CheckCC(CheckCC.Type.Z, opcodeObject));
+                        case "NZ" -> opcodeObject.addOp(new CheckCC(CheckCC.Type.NZ, opcodeObject));
+                        case "C" -> opcodeObject.addOp(new CheckCC(CheckCC.Type.C, opcodeObject));
+                        case "NC" -> opcodeObject.addOp(new CheckCC(CheckCC.Type.NC, opcodeObject));
+                    }
+                    opcodeObject.addOp(new EmptyCycle());
+                }
+                opcodeObject.addOp(new ReadMemory8Bit(opcodeObject::setDestinationValue, () -> cpu.getRegisters().getSP()));
+                opcodeObject.addOp(new ReadMemory8Bit(opcodeObject::setSourceValue, () -> (cpu.getRegisters().getSP() + 1) & 0xFFFF));
+                opcodeObject.addOp(
+                        new MergeOperands(opcodeObject::getDestinationValue, opcodeObject::getSourceValue, opcodeObject::setSourceValue)
+                );
+                opcodeObject.setDestinationOperandString("PC");
+
+                opcodeObject.addOp(
+                        new StackOperation(StackOperation.Type.POP, opcodeObject, opcodeObject::getSourceValue)
+                );
+
+                if (opcodeObject.getOpcodeInfo().getMnemonic().equals("RETI")) {
+                    //SET IME HERE
+                }
+            }
+
+            case "RST" -> {
+                opcodeObject.addOp(new EmptyCycle());
+                String ds = opcodeObject.getDestinationOperandString();
+                switch (ds) {
+                    case "$00" -> opcodeObject.setSourceValue(0x0000);
+                    case "$08" -> opcodeObject.setSourceValue(0x0008);
+                    case "$10" -> opcodeObject.setSourceValue(0x0010);
+                    case "$18" -> opcodeObject.setSourceValue(0x0018);
+                    case "$20" -> opcodeObject.setSourceValue(0x0020);
+                    case "$28" -> opcodeObject.setSourceValue(0x0028);
+                    case "$30" -> opcodeObject.setSourceValue(0x0030);
+                    case "$38" -> opcodeObject.setSourceValue(0x0038);
+                }
+
+                //Push current PC onto stack
+                opcodeObject.addOp(
+                        new StackOperation(StackOperation.Type.PUSH_HIGH,
+                                opcodeObject,
+                                () -> cpu.getRegisters().getPC())
+                );
+                opcodeObject.addOp(
+                        new StackOperation(StackOperation.Type.PUSH_LOW,
+                                opcodeObject,
+                                () -> cpu.getRegisters().getPC())
+                );
+
+                opcodeObject.setDestinationOperandString("PC");
+                opcodeObject.setDestinationType(DataType.R16);
+                opcodeObject.setSourceType(DataType.N16);
+                opcodeObject.setSourceOperandString("n16");
+                opcodeObject.addOp(new Load(opcodeObject));
+            }
 
             //Carry flag instructions
             case "CCF" -> {
@@ -419,6 +577,14 @@ public class OpcodeBuilder {
                         StackOperation.Type.PUSH_LOW, opcodeObject,
                         () -> cpu.getRegisters().getByName(opcodeObject.getDestinationOperandString())
                 ));
+            }
+
+            //Interrupt instructions
+
+
+            //Misc instructions
+            case "NOP" -> {
+                opcodeObject.addOp(new EmptyCycle());
             }
 
             default -> {

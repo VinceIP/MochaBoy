@@ -10,17 +10,18 @@ import java.util.function.Supplier;
 public class StackOperation implements MicroOperation {
     private final Type type;
     private final Opcode opcode;
-    private final int value;
+    private final Supplier<Integer> valueSupplier;
 
     public StackOperation(Type type, Opcode opcode, Supplier<Integer> valueSupplier) {
         this.type = type;
         this.opcode = opcode;
-        this.value = valueSupplier.get();
+        this.valueSupplier = valueSupplier;
     }
 
     @Override
     public MicroOperation execute(CPU cpu, Memory memory) {
         Registers r = cpu.getRegisters();
+        int value = valueSupplier.get();
         switch (type) {
             case POP -> {
                 if (opcode.getDestinationOperandString().equals("AF")) {

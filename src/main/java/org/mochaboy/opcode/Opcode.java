@@ -29,6 +29,7 @@ public class Opcode {
     private boolean decrement;
     private boolean operationsRemaining;
     private boolean unimplError = false;
+    private boolean killRemainingOps = false;
 
 
     public Opcode() {
@@ -38,7 +39,7 @@ public class Opcode {
     public void execute(CPU cpu, Memory memory) {
         MicroOperation mo = microOps.pop();
         mo.execute(cpu, memory);
-        if (microOps.isEmpty()) operationsRemaining = false;
+        if (microOps.isEmpty()|| killRemainingOps) operationsRemaining = false;
     }
 
     public MicroOperation addOp(MicroOperation microOperation) {
@@ -193,6 +194,14 @@ public class Opcode {
 
     public void setDestinationType(DataType destinationType) {
         this.destinationType = destinationType;
+    }
+
+    public boolean isKillRemainingOps() {
+        return killRemainingOps;
+    }
+
+    public void setKillRemainingOps(boolean killRemainingOps) {
+        this.killRemainingOps = killRemainingOps;
     }
 
     public String toString() {

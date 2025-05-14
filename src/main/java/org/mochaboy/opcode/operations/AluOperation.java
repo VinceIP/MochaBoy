@@ -70,7 +70,8 @@ public class AluOperation implements MicroOperation {
 
     private int add(int x, int y) {
         OpcodeInfo o = opcode.getOpcodeInfo();
-        if (o.getOperands().length > 1 && o.getOperands()[1].getName().equals("e8")) { //If this is ADD SP, e8
+        if ((o.getOperands().length > 1 && o.getOperands()[1].getName().equals("e8"))
+                || opcode.getOpcodeInfo().getMnemonic().equals("JR")) { //If this is ADD SP, e8 or a JR
             int signedDisp = (y << 24) >> 24; //Extend e8 to 32 bits
             return (x + signedDisp) & 0xFFFF;
         } else {
