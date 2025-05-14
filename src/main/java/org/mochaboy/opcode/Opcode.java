@@ -36,10 +36,11 @@ public class Opcode {
         microOps = new LinkedList<>();
     }
 
-    public void execute(CPU cpu, Memory memory) {
+    public MicroOperation execute(CPU cpu, Memory memory) {
         MicroOperation mo = microOps.pop();
         mo.execute(cpu, memory);
         if (microOps.isEmpty()|| killRemainingOps) operationsRemaining = false;
+        return mo;
     }
 
     public MicroOperation addOp(MicroOperation microOperation) {

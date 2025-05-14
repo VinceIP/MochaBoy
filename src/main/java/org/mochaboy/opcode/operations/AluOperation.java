@@ -40,7 +40,7 @@ public class AluOperation implements MicroOperation {
         if (sourceValue != null) y = sourceValue.get();
         switch (type) {
             case ADC -> result = adc(cpu, x, y);
-            case ADD -> result = add(x, y);
+            case ADD -> result = add(x, y, cpu);
             case CP -> result = 0; //FlagCalculator handles CP
             case DEC -> result = dec(x);
             case INC -> result = inc(x);
@@ -68,12 +68,13 @@ public class AluOperation implements MicroOperation {
         return ((x + y) + c) & 0xFF;
     }
 
-    private int add(int x, int y) {
+    private int add(int x, int y, CPU cpu) {
         OpcodeInfo o = opcode.getOpcodeInfo();
         if ((o.getOperands().length > 1 && o.getOperands()[1].getName().equals("e8"))
-                || opcode.getOpcodeInfo().getMnemonic().equals("JR")) { //If this is ADD SP, e8 or a JR
+                || opcode.getOpcodeInfo().getMnemonic().equals("JR")) { //If this is ADD SP, e8 or a JR;
+            //System.out.printf("\n%04X", cpu.getRegisters().getPC());
             int signedDisp = (y << 24) >> 24; //Extend e8 to 32 bits
-            return (x + signedDisp) & 0xFFFF;
+            return (x + signedDisp);
         } else {
             return (x + y) & (is16BitOperation ? 0xFFFF : 0xFF);
 

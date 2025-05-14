@@ -22,32 +22,39 @@ public class CPU extends Thread {
     private OpcodeLoader opcodeLoader;
     private OpcodeBuilder opcodeBuilder;
     private OpcodeWrapper opcodeWrapper;
-    //private OpcodeHandler opcodeHandler;
     private State state;
-    private long tStateCounter;
-    private boolean built = false;
-    private boolean IME;
-    private boolean pendingInterruptSwitch;
-    private boolean halt;
-    private boolean lowPowerMode;
-    private boolean stopMode;
-    private boolean didJump;
-    private boolean running;
-    private boolean fetchedCb;
-    private int totalCycles;
-    private int opcode;
-    private int fetchedAt;
+
     private static final int CYCLES_PER_FRAME = 70224;
     private static final double NS_PER_CYCLE = 238.4;
     private static final double FRAME_TIME_MS = 1000.0 / 59.7275;
+
+    private long elapsedNs;
+    private int totalCycles;
+    private int divCycleAcc;
+    private int timaCycleAcc;
+
+    private long tStateCounter;
+    private boolean built = false;
+    private boolean IME;
+    private boolean pendingImeEnable;
+    private boolean halt;
+    private boolean running;
+    private boolean lowPowerMode;
+    private boolean stopMode;
+
+    private boolean didJump;
+    private boolean fetchedCb;
+    private int opcode;
+    private int fetchedAt;
     private boolean runOnce = false;
-    private long elapsedEmulatedTimeNs;
     private Map<String, Integer> map;
+    private RegSnap regBefore;
 
     public CPU(PPU ppu, Memory memory) throws IOException {
         this.ppu = ppu;
         this.memory = memory;
         this.memory.setPpu(this.ppu);
+
         registers = new Registers();
         interrupt = new Interrupt(this, this.memory);
         timer = new Timer(this.memory, interrupt);
@@ -63,127 +70,80 @@ public class CPU extends Thread {
     @Override
     public void run() {
         running = true;
-        long lastDivUpdateCheck = 0;
-        long lastTimaUpdateCheck = 0;
-        long frameStartTime = System.nanoTime();
-        int divCount = 0;
-        boolean didPostBoot = false;
+        long frameStart = System.nanoTime();
         state = State.FETCH;
+
         while (running) {
-            step();
-            try {
-                sleep(50);
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-            /*
-            OpcodeInfo opcode = fetch();
-            int pc = registers.getPC();
-
-            if (pc == 0x100 && !didPostBoot) {
-                postBootInit();
-                didPostBoot = true;
-            }
-
-
-            int cycles = 0;
             if (!isHalt()) {
+                int cycles = halt ? 0 : step(); //Step if not in HALT
 
-                if (isPendingInterruptSwitch()) {
-                    setIME(true);
-                    setPendingInterruptSwitch(false);
-                }
+                tickTimers(cycles);
+                if (IME) serviceInterrupts(); //Check interrupts if enabled
 
-                cycles = execute(opcode);
+                ppu.step(cycles); //Run PPU for cycles this step
 
-                elapsedEmulatedTimeNs += (long) (cycles * NS_PER_CYCLE);
-                int isPrefix = opcode.isPrefixed() ? 1 : 0;
-                if (!didJump) registers.setPC(pc + opcode.getBytes() + isPrefix);
-                else didJump = false;
-                //handle pending IME switch
+                totalCycles += cycles;
+                elapsedNs += (long) (cycles * NS_PER_CYCLE);
 
-            }
-
-
-            //Update timers
-            if (elapsedEmulatedTimeNs - lastDivUpdateCheck >= Timer.DIV_INC_TIME_NS) {
-                timer.incDiv();
-                lastDivUpdateCheck = elapsedEmulatedTimeNs;
-            }
-
-
-            if (timer.isTacEnabled()) {
-                //System.out.println("tac");
-                long timaTickRate = (long) (timer.getTacFreq() * NS_PER_CYCLE);
-                if (elapsedEmulatedTimeNs - lastTimaUpdateCheck >= timaTickRate) {
-                    timer.incTima();
-                    lastTimaUpdateCheck = elapsedEmulatedTimeNs;
+                if (totalCycles >= CYCLES_PER_FRAME) {
+                    long frameEnd = System.nanoTime();
+                    double frameMs = (frameEnd - frameStart) / 1_000_000.0;
+                    //System.out.println("Frame ms: " + frameMs);
+                    double sleepMs = FRAME_TIME_MS - frameMs;
+                    //System.out.println("Sleep ms: " + sleepMs);
+                    if (sleepMs > 0) try {
+                        Thread.sleep((long)sleepMs);
+                    } catch (InterruptedException ignored) {}
+                    totalCycles -= CYCLES_PER_FRAME;
+                    frameStart = System.nanoTime();
                 }
             }
-
-
-            //Handle interrupts
-            if (isIME()) {
-                int IE = memory.readByte(map.get("IE"));
-                int IF = memory.readByte(map.get("IF"));
-                //System.out.printf("\nIE: %02X\nIF: %02X\n", IE, IF);
-                int triggered = IE & IF; //Get interrupts currently pending & interrupts enabled
-                for (int i = 0; i < 5; i++) { //Check bits of IF in order of interrupt priority
-                    if (((triggered >> i) & 1) == 1) {
-                        IF &= ~(1 << i); //Clear the bit if set
-                        memory.writeByte(map.get("IF"), IF);
-                        setIME(false);
-                        switch (i) {
-                            case 0:
-                                interrupt.handleInterrupt(Interrupt.INTERRUPT.VBLANK);
-                                break;
-                            case 1:
-                                interrupt.handleInterrupt(Interrupt.INTERRUPT.STAT);
-                                break;
-                            case 2:
-                                interrupt.handleInterrupt(Interrupt.INTERRUPT.TIMER);
-                                break;
-                            case 3:
-                                interrupt.handleInterrupt(Interrupt.INTERRUPT.SERIAL);
-                                break;
-                            case 4:
-                                interrupt.handleInterrupt(Interrupt.INTERRUPT.JOYPAD);
-                                break;
-                        }
-                        break;
-                    }
-
-                }
-            }
-
-
-            CPU cycle timing
-            if (totalCycles >= CYCLES_PER_FRAME) {
-                long frameEndTime = System.nanoTime();
-                double frameTimeMs = (frameEndTime - frameStartTime) / 1_000_000.0;
-                double sleepTime = FRAME_TIME_MS - frameTimeMs;
-                if (sleepTime > 0) {
-                    try {
-                        Thread.sleep((long) sleepTime);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                }
-                totalCycles -= CYCLES_PER_FRAME;
-                frameStartTime = System.nanoTime();
-            }
-
-            ppu.step(cycles);
-            totalCycles += cycles;
         }
-*/
+    }
+
+    private void tickTimers(int cycles) {
+        //DIV - 256 cycles per increment
+        divCycleAcc += cycles;
+        while (divCycleAcc >= 256) {
+            timer.incDiv();
+            divCycleAcc -= 256;
+        }
+
+        //TIMA
+        if (timer.isTacEnabled()) {
+            int period = timer.getTacPeriod();
+            timaCycleAcc += cycles;
+            while (timaCycleAcc >= period) {
+                timer.incTima();
+                timaCycleAcc -= period;
+            }
+        } else {
+            timaCycleAcc = 0;
+        }
+    }
+
+    private void serviceInterrupts() {
+        int IE = memory.readByte(map.get("IE"));
+        int IF = memory.readByte(map.get("IF"));
+        int pending = IE & IF;
+        if (pending == 0) return;
+
+        for (int i = 0; i < 5; i++) {
+            if ((pending & (1 << i)) != 0) {
+                memory.writeByte(map.get("IF"), IF & ~(1 << i));
+                IME = false;
+                interrupt.handleInterrupt(Interrupt.INTERRUPT.values()[i]);
+                break;
+            }
         }
     }
 
 
-    public void step() {
+    public int step() {
+        int cyclesThisInstr = 0;
+
         switch (state) {
-            case FETCH:
+            case FETCH -> {
                 if (!fetchedCb) fetchedAt = registers.getPC();
                 fetch();
                 if (opcode != 0xCB) {
@@ -191,12 +151,17 @@ public class CPU extends Thread {
                 } else {
                     fetchedCb = true;
                 }
-                break;
-            case DECODE_AND_EXECUTE:
+            }
+            case DECODE_AND_EXECUTE -> {
                 if (!built) {
+
                     currentOpcodeObject = opcodeBuilder.build(fetchedAt, opcode, fetchedCb);
+                    if(currentOpcodeObject.getOpcodeInfo().getMnemonic().equals("JR")){
+                        //System.out.println();
+                    }
                     fetchedCb = false;
                     built = true;
+
                     //Skip over opcode and force PC to correct location if this isn't implemented yet
                     if (currentOpcodeObject.isUnimplError()) {
                         registers.setPC(fetchedAt + currentOpcodeObject.getOpcodeInfo().getBytes());
@@ -204,10 +169,20 @@ public class CPU extends Thread {
                     }
                 }
 
+                //handle pending IME switch
+                if (isPendingImeEnable()) {
+                    setIME(true);
+                    setPendingImeEnable(false);
+                }
+
                 if (currentOpcodeObject.hasOperationsRemaining()) { //If this opcode still has work to do
+
+                    regBefore = new RegSnap(registers); //for debug
+
                     boolean done = false;
                     while (!done) { //Make sure we continuously execute any operations that don't consume cycles
-                        currentOpcodeObject.execute(this, memory);
+                        MicroOperation executed = currentOpcodeObject.execute(this, memory);
+                        cyclesThisInstr += executed.getCycles();
                         MicroOperation nextOp = currentOpcodeObject.getMicroOps().peek();
                         if (nextOp == null) {
                             done = true;
@@ -216,12 +191,74 @@ public class CPU extends Thread {
                         }
                     }
                 } else {
-                    System.out.println(currentOpcodeObject.toString(true));
+                    //printDebug();
+                    System.out.println(currentOpcodeObject.toString());
                     built = false;
+                    built = false;
+
                     state = State.FETCH;
                 }
-                break;
+            }
         }
+        return cyclesThisInstr;
+    }
+
+    private void printDebug() {
+        //System.out.println(currentOpcodeObject.toString(true));
+        RegSnap after = new RegSnap(registers);
+
+        String mnemonic = formatMnemonic(currentOpcodeObject);
+        String delta = regBefore.diff(after);
+
+        //  memory write? -> Memory class remembers the last write (address,value)
+        String memWrite = "";
+        Memory.LastWrite lastWrite = memory.getLastWrite(); // returns immutable record or null
+        if (lastWrite != null) {
+
+            int address = lastWrite.getAddress();
+            int value = lastWrite.getValue();
+            int cycleMarker = lastWrite.getCycleMarker();
+            if (cycleMarker == fetchedAt) { // wrote during THIS opcode
+                memWrite = String.format(" [WR %04X=%02X]", address, value);
+            }
+
+            System.out.printf("%04X  0x%02X  %-12s %s%s\n",
+                    fetchedAt,
+                    memory.readByte(fetchedAt) & 0xFF,
+                    mnemonic,
+                    delta,
+                    memWrite);
+        }
+    }
+
+    private String formatMnemonic(Opcode op) {
+        Operand[] ops = op.getOpcodeInfo().getOperands();
+        if (ops.length == 0) return op.getOpcodeInfo().getMnemonic();
+
+        StringBuilder sb = new StringBuilder(op.getOpcodeInfo().getMnemonic()).append(" ");
+        int pc = fetchedAt + 1; // immediate bytes start after opcode byte (prefix already eaten)
+        for (int i = 0; i < ops.length; i++) {
+            Operand o = ops[i];
+            if (!o.isImmediate()) {                       // register / condition / [HL]
+                sb.append(o.getName());
+            } else {
+                // immediate: read from memory directly so we print *exact* encoded constant
+                int val;
+                if (o.getName().endsWith("8")) {
+                    val = memory.readByte(pc) & 0xFF;
+                    sb.append(String.format("0x%02X", val));
+                    pc += 1;
+                } else { // 16‑bit
+                    int lo = memory.readByte(pc) & 0xFF;
+                    int hi = memory.readByte(pc + 1) & 0xFF;
+                    val = (hi << 8) | lo;
+                    sb.append(String.format("0x%04X", val));
+                    pc += 2;
+                }
+            }
+            if (i != ops.length - 1) sb.append(", ");
+        }
+        return sb.toString();
     }
 
     public void stopCPU() {
@@ -232,29 +269,7 @@ public class CPU extends Thread {
         new ReadImmediate8bit(this::setOpcode).execute(this, memory);
     }
 
-//    public OpcodeInfo fetch() {
-//        int opcode = memory.readByte(registers.getPC()) & 0xFF;
-//        OpcodeInfo opcodeInfo;
-//        String hexString;
-//        if (opcode == 0xCB) {
-//            //getRegisters().incrementPC();
-//            opcode = memory.readByte(registers.getPC() + 1) & 0xFF;
-//            hexString = String.format("0x%02X", opcode);
-//            opcodeInfo = opcodeWrapper.getCbprefixed().get(hexString);
-//        } else {
-//            hexString = String.format("0x%02X", opcode);
-//            opcodeInfo = opcodeWrapper.getUnprefixed().get(hexString);
-//        }
-//        return opcodeInfo;
-//    }
-
-//    public int execute(OpcodeInfo opcodeInfo) {
-//        if (opcodeInfo == null) return 0;
-//        else
-//            return opcodeHandler.execute(this, opcodeInfo);
-//    }
-
-    private void postBootInit() {
+    public void postBootInit() {
         Registers reg = getRegisters();
         reg.setAF(0x01B0);
         reg.setBC(0x0013);
@@ -304,12 +319,12 @@ public class CPU extends Thread {
         this.IME = IME;
     }
 
-    public boolean isPendingInterruptSwitch() {
-        return pendingInterruptSwitch;
+    public boolean isPendingImeEnable() {
+        return pendingImeEnable;
     }
 
-    public void setPendingInterruptSwitch(boolean pendingInterruptSwitch) {
-        this.pendingInterruptSwitch = pendingInterruptSwitch;
+    public void setPendingImeEnable(boolean pendingImeEnable) {
+        this.pendingImeEnable = pendingImeEnable;
         //setIME(true); //GET RID OF THIS LATER
     }
 
@@ -343,6 +358,10 @@ public class CPU extends Thread {
 
     public void setHalt(boolean halt) {
         this.halt = halt;
+    }
+
+    public Opcode getCurrentOpcodeObject() {
+        return currentOpcodeObject;
     }
 
     public void printHRAM() {
@@ -413,4 +432,45 @@ public class CPU extends Thread {
     }
 
 
+    private static final class RegSnap {
+        final int A, B, C, D, E, H, L, F, SP, PC;
+
+        RegSnap(Registers r) {
+            A = r.getA();
+            B = r.getB();
+            C = r.getC();
+            D = r.getD();
+            E = r.getE();
+            H = r.getH();
+            L = r.getL();
+            F = r.getF();
+            SP = r.getSP();
+            PC = r.getPC();
+        }
+
+        String diff(RegSnap n) {
+            StringBuilder sb = new StringBuilder("{");
+            add(sb, "A", A, n.A, 0xFF);
+            add(sb, "F", F, n.F, 0xFF);
+            add(sb, "B", B, n.B, 0xFF);
+            add(sb, "C", C, n.C, 0xFF);
+            add(sb, "D", D, n.D, 0xFF);
+            add(sb, "E", E, n.E, 0xFF);
+            add(sb, "H", H, n.H, 0xFF);
+            add(sb, "L", L, n.L, 0xFF);
+            add(sb, "SP", SP, n.SP, 0xFFFF);
+            add(sb, "PC", PC, n.PC, 0xFFFF);
+            if (sb.length() == 1) sb.append("no‑change");
+            sb.append('}');
+            return sb.toString();
+        }
+
+        private static void add(StringBuilder sb, String n, int a, int b, int mask) {
+            if ((a & mask) != (b & mask))
+                sb.append(String.format(" %s:%0" + (mask == 0xFF ? "2" : "4") + "X->%0" + (mask == 0xFF ? "2" : "4") + "X", n, a & mask, b & mask));
+        }
+    }
+
+
 }
+

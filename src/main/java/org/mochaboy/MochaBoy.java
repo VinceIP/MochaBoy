@@ -1,6 +1,5 @@
 package org.mochaboy;
 
-import org.mochaboy.gui.GuiGlEmulator;
 import org.mochaboy.gui.GuiSwingEmulator;
 
 import java.io.IOException;
@@ -15,7 +14,7 @@ public class MochaBoy {
 //            return;
 //        } else {
         //String romFile = args[0];
-        String romFile = "./././Super Mario Land.gb";
+        String romFile = "./././Tetris.gb";
         Path path = Paths.get(romFile);
         try {
             Cartridge cartridge = new Cartridge(path);
@@ -25,6 +24,7 @@ public class MochaBoy {
             //GuiGlEmulator gui = new GuiGlEmulator(frameBuffer);
             PPU ppu = new PPU(memory, frameBuffer, gui.getDisplay());
             CPU cpu = new CPU(ppu, memory);
+            memory.setCpu(cpu);
             ppu.setCPU(cpu);
             cpu.start();
             gui.run();

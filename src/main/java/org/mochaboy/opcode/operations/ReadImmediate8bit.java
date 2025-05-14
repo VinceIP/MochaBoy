@@ -22,6 +22,7 @@ public class ReadImmediate8bit implements MicroOperation {
     @Override
     public MicroOperation execute(CPU cpu, Memory memory) {
         result = memory.readByte(cpu.getRegisters().getPC()) & 0xFF;
+        //System.out.printf("\nReading byte at %04X: %02X", cpu.getRegisters().getPC(), result);
         cpu.getRegisters().incrementPC();
         if (addHRamOffset) result |= 0xFF00;
         consumer.accept(result);

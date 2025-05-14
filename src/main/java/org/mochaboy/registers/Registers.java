@@ -130,24 +130,15 @@ public class Registers {
     }
 
     public void setPC(int PC) {
-        if(PC == 0x221){
-            System.out.println("");
-        }
         this.PC = PC;
     }
 
     public void incrementPC() {
         setPC(getPC() + 1);
-        if(getPC() == 0x221){
-            System.out.println("");
-        }
     }
 
     public void incrementPC(int val) {
         setPC(getPC() + val);
-        if(getPC() == 0x221){
-            System.out.println("");
-        }
     }
 
     //16-bit combined registers

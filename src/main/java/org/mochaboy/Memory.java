@@ -11,9 +11,11 @@ public class Memory {
     private Cartridge cartridge;
     private Map<String, Integer> map;
     private PPU ppu;
+    private CPU cpu;
     private boolean bootRomEnabled = true;
     private boolean oamBlocked = false;
     private boolean vramBlocked = false;
+    private LastWrite lastWrite;
 
     public Memory(Cartridge cartridge) {
         this.cartridge = cartridge;
@@ -76,7 +78,7 @@ public class Memory {
         value = value & 0xFF;
         address = address & 0xFFFF;
 
-        System.out.printf("Writing byte %02X at address %04X\n", value, address);
+        //System.out.printf("Writing byte %02X at address %04X\n", value, address);
 
         //Prohibit writes to ROM space.
         //TODO: Implement MBC detection and bank switching here
@@ -106,6 +108,7 @@ public class Memory {
         // ----- Minimal no-link-cable emulation: handle 0xFF01 and 0xFF02 -----
         if (address == 0xFF01) {
             memory[address] = (byte) value;
+            lastWrite = new LastWrite(address, value, cpu.getCurrentOpcodeObject().getFetchedAt());
             return;
         }
         if (address == 0xFF02) {
@@ -129,6 +132,7 @@ public class Memory {
                 ifVal |= (1 << 3); // set bit 3 => Serial interrupt
                 memory[ifAddress] = (byte) ifVal;
             }
+            lastWrite = new LastWrite(address, value, cpu.getCurrentOpcodeObject().getFetchedAt());
             return;
         }
         // --------------------------------------------------------------------
@@ -139,6 +143,7 @@ public class Memory {
         }
 
         // Normal memory write for all other addresses
+        if(cpu !=null)lastWrite = new LastWrite(address, value, cpu.getCurrentOpcodeObject().getFetchedAt());
         memory[address] = (byte) value;
     }
 
@@ -146,6 +151,7 @@ public class Memory {
         value = value & 0xFF;
         address = address & 0xFFFF;
         memory[address] = (byte) value;
+        if(cpu!=null) lastWrite = new LastWrite(address, value, cpu.getCurrentOpcodeObject().getFetchedAt());
     }
 
 
@@ -233,5 +239,57 @@ public class Memory {
 
     public void setVramBlocked(boolean vramBlocked) {
         this.vramBlocked = vramBlocked;
+    }
+
+    public LastWrite getLastWrite() {
+        return lastWrite;
+    }
+
+    public void setLastWrite(LastWrite lastWrite) {
+        this.lastWrite = lastWrite;
+    }
+
+    public CPU getCpu() {
+        return cpu;
+    }
+
+    public void setCpu(CPU cpu) {
+        this.cpu = cpu;
+    }
+
+    public static class LastWrite{
+        private int address;
+        private int value;
+        private int cycleMarker;
+
+        public LastWrite(int address, int value, int cycleMarker){
+            this.address = address;
+            this.value = value;
+            this.cycleMarker = cycleMarker;
+        }
+
+        public int getAddress() {
+            return address;
+        }
+
+        public void setAddress(int address) {
+            this.address = address;
+        }
+
+        public int getValue() {
+            return value;
+        }
+
+        public void setValue(int value) {
+            this.value = value;
+        }
+
+        public int getCycleMarker() {
+            return cycleMarker;
+        }
+
+        public void setCycleMarker(int cycleMarker) {
+            this.cycleMarker = cycleMarker;
+        }
     }
 }

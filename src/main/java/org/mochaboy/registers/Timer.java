@@ -61,7 +61,7 @@ public class Timer {
         return (getTac() >> 2) != 0;
     }
 
-    public int getTacFreq() {
+    public int getTacPeriod() {
         int tac = getTac() & 0x03;
         int tacFreq = 0;
         switch (tac) {

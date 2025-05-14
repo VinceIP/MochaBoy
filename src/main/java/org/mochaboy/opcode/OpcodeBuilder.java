@@ -2,6 +2,7 @@ package org.mochaboy.opcode;
 
 import org.mochaboy.CPU;
 import org.mochaboy.DataType;
+import org.mochaboy.Memory;
 import org.mochaboy.opcode.operations.*;
 
 public class OpcodeBuilder {
@@ -17,6 +18,9 @@ public class OpcodeBuilder {
     }
 
     public Opcode build(int fetchedAt, int opcode, boolean isPrefixed) {
+        if(fetchedAt == 0x0A){
+            //System.out.println();
+        }
         Opcode opcodeObject = new Opcode();
         opcodeObject.setFetchedAt(fetchedAt);
         String hexKey = String.format("0x%02X", opcode);
@@ -29,9 +33,12 @@ public class OpcodeBuilder {
         buildMicroOpsFromOperands(opcodeObject, opcodeInfo);
         buildOpsFromMnemonics(opcodeObject, opcodeInfo);
 
-        //Queue up a flag process op
-        opcodeObject.addOp(new HandleFlags(flagCalculator, cpu, opcodeInfo,
-                opcodeObject::getDestinationValue, opcodeObject::getSourceValue));
+        //Queue up a flag process op if needed
+        Flags f = opcodeInfo.getFlags();
+        if (!f.getC().equals("-") || !f.getH().equals("-") || !f.getN().equals("-") || !f.getZ().equals("-")) {
+            opcodeObject.addOp(new HandleFlags(flagCalculator, cpu, opcodeInfo,
+                    opcodeObject::getDestinationValue, opcodeObject::getSourceValue));
+        }
 
         //Determine if this is LD [HL-/+]
         if (checkIncDec) {
@@ -39,7 +46,7 @@ public class OpcodeBuilder {
         }
 
         //
-        opcodeObject.setCyclesConsumed(1 + calculateCycles(opcodeObject));
+        opcodeObject.setCyclesConsumed(calculateCycles(opcodeObject));
 
         return opcodeObject;
     }
@@ -467,7 +474,7 @@ public class OpcodeBuilder {
 
             case "JR" -> {
                 //Read 8-bit offset, check for conditions
-                opcodeObject.addOp(new ReadImmediate8bit(opcodeObject::setSourceValue));
+                //opcodeObject.addOp(new ReadImmediate8bit(opcodeObject::setSourceValue));
                 if (opcodeObject.getCc() != null) {
                     switch (opcodeObject.getCc()) {
                         case "Z" -> opcodeObject.addOp(new CheckCC(CheckCC.Type.Z, opcodeObject));
@@ -475,28 +482,29 @@ public class OpcodeBuilder {
                         case "C" -> opcodeObject.addOp(new CheckCC(CheckCC.Type.C, opcodeObject));
                         case "NC" -> opcodeObject.addOp(new CheckCC(CheckCC.Type.NC, opcodeObject));
                     }
-                    //If no cc or conditions satisfied, idle once and add the offset to PC
-                    opcodeObject.addOp(new EmptyCycle());
-                    opcodeObject.setDestinationOperandString("PC");
-                    opcodeObject.setDestinationType(DataType.R16);
-                    opcodeObject.addOp(new AluOperation(
-                            AluOperation.Type.ADD,
-                            opcodeObject,
-                            () -> cpu.getRegisters().getPC(),
-                            opcodeObject::getSourceValue
-                    ));
                 }
+                //If no cc or conditions satisfied, idle once and add the offset to PC
+                opcodeObject.addOp(new EmptyCycle());
+                opcodeObject.setDestinationOperandString("PC");
+                opcodeObject.setDestinationType(DataType.R16);
+                opcodeObject.addOp(new AluOperation(
+                        AluOperation.Type.ADD,
+                        opcodeObject,
+                        () -> cpu.getRegisters().getPC(),
+                        () -> (int) (byte) opcodeObject.getSourceValue()
+                ));
+
             }
 
             case "RET", "RETI" -> {
                 if (opcodeObject.getCc() != null) {
+                    opcodeObject.addOp(new EmptyCycle());
                     switch (opcodeObject.getCc()) {
                         case "Z" -> opcodeObject.addOp(new CheckCC(CheckCC.Type.Z, opcodeObject));
                         case "NZ" -> opcodeObject.addOp(new CheckCC(CheckCC.Type.NZ, opcodeObject));
                         case "C" -> opcodeObject.addOp(new CheckCC(CheckCC.Type.C, opcodeObject));
                         case "NC" -> opcodeObject.addOp(new CheckCC(CheckCC.Type.NC, opcodeObject));
                     }
-                    opcodeObject.addOp(new EmptyCycle());
                 }
                 opcodeObject.addOp(new ReadMemory8Bit(opcodeObject::setDestinationValue, () -> cpu.getRegisters().getSP()));
                 opcodeObject.addOp(new ReadMemory8Bit(opcodeObject::setSourceValue, () -> (cpu.getRegisters().getSP() + 1) & 0xFFFF));
@@ -580,7 +588,21 @@ public class OpcodeBuilder {
             }
 
             //Interrupt instructions
+            case "DI" -> {
+                opcodeObject.addOp(
+                        new InterruptOperation(InterruptOperation.Type.DI, cpu));
+            }
+            case "EI" -> {
+                opcodeObject.addOp(
+                        new InterruptOperation(InterruptOperation.Type.EI, cpu));
+            }
+            case "HALT" -> {
 
+            }
+
+            case "DAA" -> {
+
+            }
 
             //Misc instructions
             case "NOP" -> {
