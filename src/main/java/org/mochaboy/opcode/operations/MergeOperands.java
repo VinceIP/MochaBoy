@@ -19,9 +19,9 @@ public class MergeOperands implements MicroOperation {
 
     @Override
     public MicroOperation execute(CPU cpu, Memory memory) {
-        int left = leftGetter.get() & 0xFF;
-        int right = rightGetter.get() & 0xFF;
-        int n16 = ((left << 8) | right) & 0xFFFF;
+        int lo  = leftGetter.get() & 0xFF;
+        int hi  = rightGetter.get() & 0xFF;
+        int n16 = ((hi << 8) | lo) & 0xFFFF;
         resultSetter.accept(n16);
         return this;
     }

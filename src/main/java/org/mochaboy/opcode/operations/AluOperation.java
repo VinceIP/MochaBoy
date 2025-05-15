@@ -41,7 +41,9 @@ public class AluOperation implements MicroOperation {
         switch (type) {
             case ADC -> result = adc(cpu, x, y);
             case ADD -> result = add(x, y, cpu);
-            case CP -> result = 0; //FlagCalculator handles CP
+            case CP -> {
+                return this; //FlagCalculator handles CP
+            }
             case DEC -> result = dec(x);
             case INC -> result = inc(x);
             case SBC -> result = sbc(cpu, x, y);

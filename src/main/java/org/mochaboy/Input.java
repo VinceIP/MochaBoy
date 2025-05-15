@@ -14,7 +14,7 @@ public class Input {
     }
 
     private void init() {
-        memory.writeByte(map.get("JOYP"), 0xCF);
+        memory.writeByteUnrestricted(map.get("JOYP"), 0xCF);
     }
 
 }

@@ -2,7 +2,6 @@ package org.mochaboy.opcode;
 
 import org.mochaboy.CPU;
 import org.mochaboy.DataType;
-import org.mochaboy.Memory;
 import org.mochaboy.opcode.operations.*;
 
 public class OpcodeBuilder {
@@ -17,8 +16,14 @@ public class OpcodeBuilder {
         this.flagCalculator = new FlagCalculator();
     }
 
+    public Opcode build(int predefinedOpcode, boolean isPrefixed) {
+        return build(
+                0x00, predefinedOpcode, isPrefixed
+        );
+    }
+
     public Opcode build(int fetchedAt, int opcode, boolean isPrefixed) {
-        if(fetchedAt == 0x0A){
+        if (fetchedAt == 0x0A) {
             //System.out.println();
         }
         Opcode opcodeObject = new Opcode();
@@ -46,7 +51,10 @@ public class OpcodeBuilder {
         }
 
         //
-        opcodeObject.setCyclesConsumed(calculateCycles(opcodeObject));
+        //opcodeObject.setCyclesConsumed(calculateCycles(opcodeObject));
+        opcodeObject.addOp(
+                new CalculateCycles(opcodeObject)
+        );
 
         return opcodeObject;
     }
@@ -95,14 +103,14 @@ public class OpcodeBuilder {
         opcodeObject.setDestinationOperandString(d.getName());
         opcodeObject.setDestinationOperand(d);
         switch (d.getName()) {
-            case "a8":
+            case "a8" -> {
                 //Only occurs in LDH
                 opcodeObject.setDestinationType(DataType.A8);
                 opcodeObject.addOp(
                         new ReadImmediate8bit(opcodeObject::setDestinationValue, true) //Adds offset of FF00
                 );
-                break;
-            case "a16":
+            }
+            case "a16" -> {
                 //This is an address
                 //2 cycles to read 16-bit address
                 //Gets the low and high bytes, stores them temporarily in the opcode's dest and source values,
@@ -115,10 +123,8 @@ public class OpcodeBuilder {
                                 opcodeObject::getDestinationValue, opcodeObject::getSourceValue,
                                 opcodeObject::setDestinationValue)
                 );
-                break;
-            case "A":
-            case "B":
-            case "C":
+            }
+            case "A", "B", "C", "D", "E", "H", "L" -> {
                 //Operand C could refer to register C, or flag condition cc, depending on the mnemonic
                 //Explicitly set a condition if so and break
                 OpcodeInfo o = opcodeObject.getOpcodeInfo();
@@ -127,12 +133,8 @@ public class OpcodeBuilder {
                         || o.getMnemonic().equals("JR")
                         || o.getMnemonic().equals("RET")) {
                     opcodeObject.setCc("C");
-                    break;
                 }
-            case "D":
-            case "E":
-            case "H":
-            case "L":
+
                 if (!d.isImmediate()) {
                     //If it's an 8b register and not immediate, it must be LD [C], A
                     opcodeObject.setDestinationType(DataType.A8);
@@ -142,15 +144,11 @@ public class OpcodeBuilder {
                 opcodeObject.addOp(
                         new ReadRegister8Bit(opcodeObject::setDestinationValue, d.getName())
                 );
-                break;
-            case "AF":
-            case "BC":
-            case "DE":
-            case "HL":
+            }
+            case "AF", "BC", "DE", "HL", "SP", "PC" -> {
                 //Signal for post increment/decrement as in LD [HL-]/[HL+] A
                 if (d.isIncrement() || d.isDecrement()) checkIncDec = true;
-            case "SP":
-            case "PC":
+
                 //If not an immediate value, read the address held in a 16-bit register
                 if (!d.isImmediate()) {
                     opcodeObject.setDestinationType(DataType.N16);
@@ -161,19 +159,17 @@ public class OpcodeBuilder {
                     opcodeObject.addOp(
                             new ReadRegister16Bit(opcodeObject::setDestinationValue, d.getName()));
                 }
-                break;
+            }
             //RES - set bit u3 to 0 in r8 or [HL]
             //BIT - test bit u3 in r8
-            case "0", "1", "2", "3", "4", "5", "6", "7", "8", "9":
+            case "0", "1", "2", "3", "4", "5", "6", "7", "8", "9" -> {
                 opcodeObject.setDestinationValue(Integer.parseInt(d.getName()));
-                break;
-            case "Z":
-            case "NZ":
-            case "NC":
+            }
+            case "Z", "NZ", "NC" -> {
                 opcodeObject.setCc(d.getName()); //Other flag conditions
-                break;
-            case "$00", "$08", "$10", "$18", "$20", "$28", "$30", "$38":
-                break;
+            }
+            case "$00", "$08", "$10", "$18", "$20", "$28", "$30", "$38" -> {
+            }
         }
 
     }
@@ -189,10 +185,15 @@ public class OpcodeBuilder {
                 );
                 break;
             case "a8":
-                //Only occurs in LDH
                 opcodeObject.setSourceType(DataType.A8);
                 opcodeObject.addOp(
-                        new ReadImmediate8bit(opcodeObject::setSourceValue, true) //Adds offset of FF00
+                        new ReadImmediate8bit(opcodeObject::setSourceValue, true)
+                );
+                opcodeObject.addOp(
+                        new ReadMemory8Bit(
+                                opcodeObject::setSourceValue,
+                                opcodeObject::getSourceValue
+                        )
                 );
                 break;
             case "n16":
@@ -211,8 +212,7 @@ public class OpcodeBuilder {
                 break;
 
             case "a16":
-                //Same as above, but a16 only appears in JUMP/CALL, so set it as operand 1
-                opcodeObject.setDestinationType(DataType.N16);
+                opcodeObject.setSourceType(DataType.N16);
                 opcodeObject.addOp(
                         new ReadImmediate8bit(opcodeObject::setDestinationValue)
                 );
@@ -221,8 +221,11 @@ public class OpcodeBuilder {
                 );
                 opcodeObject.addOp(
                         new MergeOperands(
-                                opcodeObject::getDestinationValue, opcodeObject::getSourceValue, opcodeObject::setDestinationValue)
+                                opcodeObject::getDestinationValue, opcodeObject::getSourceValue, opcodeObject::setSourceValue)
                 );
+                opcodeObject.addOp(new ReadMemory8Bit(
+                        opcodeObject::setSourceValue, opcodeObject::getSourceValue
+                ));
                 break;
             case "e8":
                 opcodeObject.setSourceType(DataType.E8);
@@ -241,6 +244,7 @@ public class OpcodeBuilder {
                 //Stupid check to make sure INC and DEC get handled correctly. Trust me
                 if (m.equals("INC") || m.equals("DEC")) {
                     opcodeObject.addOp(new ReadRegister8Bit(opcodeObject::setDestinationValue, s.getName()));
+                    break;
                 } else opcodeObject.addOp(new ReadRegister8Bit(opcodeObject::setSourceValue, s.getName()));
                 break;
             case "AF":
@@ -250,10 +254,21 @@ public class OpcodeBuilder {
                 if (s.isIncrement() || s.isDecrement()) checkIncDec = true;
             case "SP":
             case "PC":
-                opcodeObject.setSourceType(DataType.R16);
-                opcodeObject.addOp(
-                        new ReadRegister16Bit(opcodeObject::setSourceValue, s.getName())
-                );
+                if (opcodeObject.getSourceOperand().isImmediate()) {
+                    opcodeObject.setSourceType(DataType.R16);
+                    opcodeObject.addOp(
+                            new ReadRegister16Bit(opcodeObject::setSourceValue, s.getName())
+                    );
+                    break;
+                } else {
+                    opcodeObject.setSourceType(DataType.N16);
+                    opcodeObject.addOp(
+                            new ReadRegister16Bit(opcodeObject::setSourceValue, s.getName())
+                    );
+                    opcodeObject.addOp(
+                            new ReadMemory16Bit(opcodeObject::setSourceValue, opcodeObject::getSourceValue)
+                    );
+                }
                 break;
         }
     }

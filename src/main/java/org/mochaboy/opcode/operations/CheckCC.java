@@ -21,22 +21,22 @@ public class CheckCC implements MicroOperation {
             case Z -> {
                 if (!r.isFlagSet(Registers.FLAG_ZERO)) {
                     opcode.setKillRemainingOps(true);
-                }
+                } else opcode.setTaken(true);
             }
             case NZ -> {
                 if (r.isFlagSet(Registers.FLAG_ZERO)) {
                     opcode.setKillRemainingOps(true);
-                }
+                } else opcode.setTaken(true);
             }
             case C -> {
                 if (!r.isFlagSet(Registers.FLAG_CARRY)) {
                     opcode.setKillRemainingOps(true);
-                }
+                } else opcode.setTaken(true);
             }
             case NC -> {
                 if (r.isFlagSet(Registers.FLAG_CARRY)) {
                     opcode.setKillRemainingOps(true);
-                }
+                } else opcode.setTaken(true);
             }
         }
         return this;

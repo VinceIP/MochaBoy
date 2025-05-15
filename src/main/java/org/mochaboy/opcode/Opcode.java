@@ -20,13 +20,14 @@ public class Opcode {
     private Operand extraOperand;
     private DataType sourceType;
     private DataType destinationType;
+    private int[] cycleChoices;
+    private int realCycles;
+    private boolean taken;
     private int fetchedAt;
     private int sourceValue;
     private int destinationValue;
     private int extraValue;
     private int cyclesConsumed;
-    private boolean increment;
-    private boolean decrement;
     private boolean operationsRemaining;
     private boolean unimplError = false;
     private boolean killRemainingOps = false;
@@ -195,6 +196,30 @@ public class Opcode {
 
     public void setDestinationType(DataType destinationType) {
         this.destinationType = destinationType;
+    }
+
+    public int[] getCycleChoices() {
+        return cycleChoices;
+    }
+
+    public void setCycleChoices(int[] cycleChoices) {
+        this.cycleChoices = cycleChoices;
+    }
+
+    public int getRealCycles() {
+        return realCycles;
+    }
+
+    public void setRealCycles(int realCycles) {
+        this.realCycles = realCycles;
+    }
+
+    public boolean isTaken() {
+        return taken;
+    }
+
+    public void setTaken(boolean taken) {
+        this.taken = taken;
     }
 
     public boolean isKillRemainingOps() {

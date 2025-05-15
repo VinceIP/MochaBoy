@@ -22,7 +22,7 @@ public class CPU extends Thread {
     private OpcodeLoader opcodeLoader;
     private OpcodeBuilder opcodeBuilder;
     private OpcodeWrapper opcodeWrapper;
-    private State state;
+    private CPUState state;
 
     private static final int CYCLES_PER_FRAME = 70224;
     private static final double NS_PER_CYCLE = 238.4;
@@ -50,6 +50,9 @@ public class CPU extends Thread {
     private Map<String, Integer> map;
     private RegSnap regBefore;
 
+    private boolean testStepComplete;
+    private boolean testMode;
+
     public CPU(PPU ppu, Memory memory) throws IOException {
         this.ppu = ppu;
         this.memory = memory;
@@ -69,9 +72,10 @@ public class CPU extends Thread {
 
     @Override
     public void run() {
+
         running = true;
         long frameStart = System.nanoTime();
-        state = State.FETCH;
+        state = CPUState.FETCH;
 
         while (running) {
             if (!isHalt()) {
@@ -92,8 +96,9 @@ public class CPU extends Thread {
                     double sleepMs = FRAME_TIME_MS - frameMs;
                     //System.out.println("Sleep ms: " + sleepMs);
                     if (sleepMs > 0) try {
-                        Thread.sleep((long)sleepMs);
-                    } catch (InterruptedException ignored) {}
+                        Thread.sleep((long) sleepMs);
+                    } catch (InterruptedException ignored) {
+                    }
                     totalCycles -= CYCLES_PER_FRAME;
                     frameStart = System.nanoTime();
                 }
@@ -140,25 +145,34 @@ public class CPU extends Thread {
 
 
     public int step() {
+
+
         int cyclesThisInstr = 0;
 
         switch (state) {
             case FETCH -> {
+                testStepComplete = false;
                 if (!fetchedCb) fetchedAt = registers.getPC();
                 fetch();
                 if (opcode != 0xCB) {
-                    state = State.DECODE_AND_EXECUTE;
+                    state = CPUState.DECODE_AND_EXECUTE;
                 } else {
                     fetchedCb = true;
                 }
             }
             case DECODE_AND_EXECUTE -> {
                 if (!built) {
+                    if (testMode) {
+                        currentOpcodeObject = opcodeBuilder.build(opcode, fetchedCb);
+                    } else currentOpcodeObject = opcodeBuilder.build(fetchedAt, opcode, fetchedCb);
+//                    if (fetchedAt == 0x0064) {
+//                        int ly = memory.readByteUnrestricted(0xFF44);
+//                        System.out.printf("DEBUG: about to LDH A,(FF44) A<-%02X  (PPU LY=%d)\n", ly, ly);
+//                    }
+//                    if (fetchedAt == 0x0066) {
+//                        System.out.printf("DEBUG: A=%02X  CP with #$%02X -> ", registers.getA(), currentOpcodeObject.getSourceValue());
+//                    }
 
-                    currentOpcodeObject = opcodeBuilder.build(fetchedAt, opcode, fetchedCb);
-                    if(currentOpcodeObject.getOpcodeInfo().getMnemonic().equals("JR")){
-                        //System.out.println();
-                    }
                     fetchedCb = false;
                     built = true;
 
@@ -182,7 +196,7 @@ public class CPU extends Thread {
                     boolean done = false;
                     while (!done) { //Make sure we continuously execute any operations that don't consume cycles
                         MicroOperation executed = currentOpcodeObject.execute(this, memory);
-                        cyclesThisInstr += executed.getCycles();
+                        //cyclesThisInstr += executed.getCycles();
                         MicroOperation nextOp = currentOpcodeObject.getMicroOps().peek();
                         if (nextOp == null) {
                             done = true;
@@ -193,14 +207,19 @@ public class CPU extends Thread {
                 } else {
                     //printDebug();
                     System.out.println(currentOpcodeObject.toString());
+                    cyclesThisInstr = currentOpcodeObject.getRealCycles();
+                    //System.out.println(cyclesThisInstr);
                     built = false;
-                    built = false;
-
-                    state = State.FETCH;
+                    state = CPUState.FETCH;
+                    testStepComplete = true;
                 }
             }
         }
         return cyclesThisInstr;
+    }
+
+    private void fetch() {
+        new ReadImmediate8bit(this::setOpcode).execute(this, memory);
     }
 
     private void printDebug() {
@@ -265,9 +284,6 @@ public class CPU extends Thread {
         running = false;
     }
 
-    private void fetch() {
-        new ReadImmediate8bit(this::setOpcode).execute(this, memory);
-    }
 
     public void postBootInit() {
         Registers reg = getRegisters();
@@ -278,9 +294,17 @@ public class CPU extends Thread {
         reg.setSP(0xFFFE);
     }
 
-    public enum State {
+    public enum CPUState {
         FETCH,
         DECODE_AND_EXECUTE
+    }
+
+    public CPUState getCpuState() {
+        return state;
+    }
+
+    public void setCpuState(CPUState cpuState) {
+        this.state = cpuState;
     }
 
     public Memory getMemory() {
@@ -362,6 +386,22 @@ public class CPU extends Thread {
 
     public Opcode getCurrentOpcodeObject() {
         return currentOpcodeObject;
+    }
+
+    public boolean isTestStepComplete() {
+        return testStepComplete;
+    }
+
+    public void setTestStepComplete(boolean testStepComplete) {
+        this.testStepComplete = testStepComplete;
+    }
+
+    public boolean isTestMode() {
+        return testMode;
+    }
+
+    public void setTestMode(boolean testMode) {
+        this.testMode = testMode;
     }
 
     public void printHRAM() {

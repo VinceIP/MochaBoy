@@ -25,6 +25,12 @@ public class Memory {
         init();
     }
 
+    public Memory() {
+        map = new MemoryMap().getMap();
+        memory = new byte[0x10000];
+        bootRom = new byte[0x100];
+    }
+
     public void init() {
         //Put cart ROM into memory
         loadBootRom();
@@ -39,28 +45,30 @@ public class Memory {
     public int readByte(int address) {
         address &= 0xFFFF;
 
-        //If reading from OAM
-        if (address >= map.get("OAM_START") && address <= map.get("OAM_END")) {
-            if (oamBlocked) return 0xFF;
-        }
+        if (!cpu.isTestMode()) {
+            //If reading from OAM
+            if (address >= map.get("OAM_START") && address <= map.get("OAM_END")) {
+                if (oamBlocked) return 0xFF;
+            }
 
-        if(address >= map.get("VRAM_START") && address <= map.get("VRAM_END")){
-            if(vramBlocked) return 0xFF;
-        }
+            if (address >= map.get("VRAM_START") && address <= map.get("VRAM_END")) {
+                if (vramBlocked) return 0xFF;
+            }
 
-        if (bootRomEnabled && address <= 0x00FF) {
-            return bootRom[address] & 0xFF;
-        }
-        if (address == 0xFF01) {
-            return 0xFF;
-        }
-        if (address == 0xFF02) {
-            return 0x7E;
-        }
-        return memory[address] & 0xFF;
+            if (bootRomEnabled && address <= 0x00FF) {
+                return bootRom[address] & 0xFF;
+            }
+            if (address == 0xFF01) {
+                return 0xFF;
+            }
+            if (address == 0xFF02) {
+                return 0x7E;
+            }
+            return memory[address] & 0xFF;
+        } else return readByteUnrestricted(address);
     }
 
-    public int readByteUnrestricted(int address){
+    public int readByteUnrestricted(int address) {
         return memory[address] & 0xFF;
     }
 
@@ -78,7 +86,10 @@ public class Memory {
         value = value & 0xFF;
         address = address & 0xFFFF;
 
-        //System.out.printf("Writing byte %02X at address %04X\n", value, address);
+        if (cpu.isTestMode()) {
+            writeByteUnrestricted(address, value);
+            return;
+        }
 
         //Prohibit writes to ROM space.
         //TODO: Implement MBC detection and bank switching here
@@ -92,8 +103,8 @@ public class Memory {
             if (oamBlocked) return;
         }
 
-        if(address >= map.get("VRAM_START") && address <= map.get("VRAM_END")){
-            if(vramBlocked) return;
+        if (address >= map.get("VRAM_START") && address <= map.get("VRAM_END")) {
+            if (vramBlocked) return;
         }
 
         if (address == 0xFF50) {
@@ -143,15 +154,16 @@ public class Memory {
         }
 
         // Normal memory write for all other addresses
-        if(cpu !=null)lastWrite = new LastWrite(address, value, cpu.getCurrentOpcodeObject().getFetchedAt());
+        if (cpu != null) lastWrite = new LastWrite(address, value, cpu.getCurrentOpcodeObject().getFetchedAt());
         memory[address] = (byte) value;
     }
 
-    public void writeByteUnrestricted(int address, int value){
+    public void writeByteUnrestricted(int address, int value) {
         value = value & 0xFF;
         address = address & 0xFFFF;
         memory[address] = (byte) value;
-        if(cpu!=null) lastWrite = new LastWrite(address, value, cpu.getCurrentOpcodeObject().getFetchedAt());
+        if (cpu != null && cpu.getCurrentOpcodeObject() != null)
+            lastWrite = new LastWrite(address, value, cpu.getCurrentOpcodeObject().getFetchedAt());
     }
 
 
@@ -174,7 +186,7 @@ public class Memory {
         address &= 0xFFFF;
         int lowByte = readByte(address & 0xFFFF);
         int highByte = readByte((address + 1) & 0xFFFF);
-        return (highByte << 8) | lowByte;
+        return ((highByte << 8) | lowByte) & 0xFFFF;
     }
 
     /**
@@ -257,12 +269,12 @@ public class Memory {
         this.cpu = cpu;
     }
 
-    public static class LastWrite{
+    public static class LastWrite {
         private int address;
         private int value;
         private int cycleMarker;
 
-        public LastWrite(int address, int value, int cycleMarker){
+        public LastWrite(int address, int value, int cycleMarker) {
             this.address = address;
             this.value = value;
             this.cycleMarker = cycleMarker;

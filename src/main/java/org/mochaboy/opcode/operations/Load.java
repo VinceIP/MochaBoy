@@ -15,6 +15,7 @@ public class Load implements MicroOperation {
 
     @Override
     public MicroOperation execute(CPU cpu, Memory memory) {
+
         Registers r = cpu.getRegisters();
         String ss = opcode.getSourceOperandString();
         String ds = opcode.getDestinationOperandString();

@@ -4,6 +4,7 @@ import org.mochaboy.CPU;
 import org.mochaboy.Memory;
 import org.mochaboy.opcode.FlagCalculator;
 import org.mochaboy.opcode.OpcodeInfo;
+import org.mochaboy.registers.Registers;
 
 import java.util.function.Supplier;
 
@@ -28,7 +29,11 @@ public class HandleFlags implements MicroOperation {
         int xVal = x.get();
         int yVal = y.get();
         flagCalculator.processFlags(cpu, opcodeInfo, xVal, yVal);
-        return null;
+//        if (opcodeInfo.getMnemonic().equals("CP") && cpu.getCurrentOpcodeObject().getFetchedAt() == 0x0066) {
+//            boolean z = cpu.getRegisters().isFlagSet(Registers.FLAG_ZERO);
+//            System.out.println(" -> after CP, Z=" + z);
+//        }
+        return this;
     }
 
     @Override

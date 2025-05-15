@@ -53,18 +53,13 @@ public class PPU {
     }
 
     public void step(int cycles) {
-
         int lcdc = memory.readByteUnrestricted(memoryMap.get("LCDC"));
-                lcdEnabled = (lcdc & 0x80) != 0;
-
-        if (!lcdEnabled) {
-            memory.setVramBlocked(false);   // VRAM fully accessible
-            memory.setOamBlocked(false);    // OAM too
-            memory.writeByteUnrestricted(memoryMap.get("LY"), 0x00);
-                    setPpuMode(PPU_MODE.HBLANK);    // safe idle state
-            return;                         // skip timing while LCD off
-        }
-
+        lcdEnabled = (lcdc & 0x80) != 0;
+//        if (!isLcdEnabled()) {
+//            memory.writeByteUnrestricted(memoryMap.get("LY"), 0x00);
+//            setPpuMode(PPU_MODE.HBLANK);
+//            return;
+//        }
         int lyAddress = memory.getMemoryMap().get("LY");
         int ly = memory.readByteUnrestricted(lyAddress);
 
