@@ -34,6 +34,10 @@ public class OpcodeBuilder {
                 opcodeWrapper.getCbprefixed().get(hexKey) : opcodeWrapper.getUnprefixed().get(hexKey);
         opcodeObject.setOpcodeInfo(opcodeInfo);
 
+        if(opcodeObject.getOpcodeInfo().getOpcode() == 0xDA){
+            System.out.println();
+        }
+
         //Build opcode
         buildMicroOpsFromOperands(opcodeObject, opcodeInfo);
         buildOpsFromMnemonics(opcodeObject, opcodeInfo);
@@ -133,6 +137,7 @@ public class OpcodeBuilder {
                         || o.getMnemonic().equals("JR")
                         || o.getMnemonic().equals("RET")) {
                     opcodeObject.setCc("C");
+                    break;
                 }
 
                 if (!d.isImmediate()) {
@@ -214,10 +219,26 @@ public class OpcodeBuilder {
                 opcodeObject.addOp(
                         new ReadImmediate8bit(opcodeObject::setSourceValue)
                 );
-                opcodeObject.addOp(
-                        new MergeOperands(
-                                opcodeObject::getDestinationValue, opcodeObject::getSourceValue, opcodeObject::setSourceValue)
-                );
+
+                //Change where MergeOperands result is stored depending on whether of not this is a call
+                //Trust me bro
+                OpcodeInfo o = opcodeObject.getOpcodeInfo();
+                if (o.getMnemonic().equals("CALL")
+                        || o.getMnemonic().equals("JP")
+                        || o.getMnemonic().equals("JR")
+                        || o.getMnemonic().equals("RET")) {
+                    opcodeObject.addOp(
+                            new MergeOperands(
+                                    opcodeObject::getDestinationValue, opcodeObject::getSourceValue, opcodeObject::setDestinationValue)
+                    );
+                    break;
+                } else {
+                    opcodeObject.addOp(
+                            new MergeOperands(
+                                    opcodeObject::getDestinationValue, opcodeObject::getSourceValue, opcodeObject::setSourceValue)
+                    );
+                }
+
                 opcodeObject.addOp(new ReadMemory8Bit(
                         opcodeObject::setSourceValue, opcodeObject::getSourceValue
                 ));
@@ -415,15 +436,15 @@ public class OpcodeBuilder {
             //Subroutine instructions
             case "CALL" -> {
                 //Read address target from immediate, merge, store into sourceValue of opcode
-                opcodeObject.addOp(
-                        new ReadImmediate8bit(opcodeObject::setDestinationValue));
-                opcodeObject.addOp(
-                        new ReadImmediate8bit(opcodeObject::setSourceValue));
-                opcodeObject.addOp(
-                        new MergeOperands(
-                                opcodeObject::getDestinationValue,
-                                opcodeObject::getSourceValue,
-                                opcodeObject::setSourceValue));
+//                opcodeObject.addOp(
+//                        new ReadImmediate8bit(opcodeObject::setDestinationValue));
+//                opcodeObject.addOp(
+//                        new ReadImmediate8bit(opcodeObject::setSourceValue));
+//                opcodeObject.addOp(
+//                        new MergeOperands(
+//                            opcodeObject::getDestinationValue,
+//                            opcodeObject::getSourceValue,
+//                            opcodeObject::setSourceValue));
 
                 //Check conditions cc
                 if (opcodeObject.getCc() != null) {
@@ -453,6 +474,7 @@ public class OpcodeBuilder {
                 opcodeObject.setDestinationType(DataType.R16);
                 opcodeObject.setSourceOperandString("n16");
                 opcodeObject.setSourceType(DataType.N16);
+                opcodeObject.addOp(new FlipOperands(opcodeObject));
                 opcodeObject.addOp(
                         new Load(opcodeObject)
                 );
@@ -467,12 +489,12 @@ public class OpcodeBuilder {
                     opcodeObject.setSourceOperandString("HL");
                     opcodeObject.addOp(new ReadRegister16Bit(opcodeObject::setSourceValue, "HL"));
                     opcodeObject.addOp(new Load(opcodeObject));
-                } else if (ds.equals("n16") || ds.equals("Z") || ds.equals("NZ") || ds.equals("C") || ds.equals("NC")) {
+                } else if (ds.equals("n16") || ds.equals("a16") || ds.equals("Z") || ds.equals("NZ") || ds.equals("C") || ds.equals("NC")) {
                     //JP n16/JP cc,n16, read n16 then do imaginary LD PC n16
-                    opcodeObject.addOp(new ReadImmediate8bit(opcodeObject::setDestinationValue));
-                    opcodeObject.addOp(new ReadImmediate8bit(opcodeObject::setSourceValue));
-                    opcodeObject.addOp(new MergeOperands(opcodeObject::getDestinationValue, opcodeObject::getSourceValue,
-                            opcodeObject::setSourceValue));
+//                    opcodeObject.addOp(new ReadImmediate8bit(opcodeObject::setDestinationValue));
+//                    opcodeObject.addOp(new ReadImmediate8bit(opcodeObject::setSourceValue));
+//                    opcodeObject.addOp(new MergeOperands(opcodeObject::getDestinationValue, opcodeObject::getSourceValue,
+//                            opcodeObject::setSourceValue));
                     opcodeObject.setDestinationOperandString("PC");
                     opcodeObject.setDestinationType(DataType.R16);
                     opcodeObject.setSourceOperandString("n16");
@@ -485,6 +507,7 @@ public class OpcodeBuilder {
                             case "NC" -> opcodeObject.addOp(new CheckCC(CheckCC.Type.NC, opcodeObject));
                         }
                     }
+                    opcodeObject.addOp(new FlipOperands(opcodeObject));
                     opcodeObject.addOp(new Load(opcodeObject));
                 }
             }
@@ -504,6 +527,7 @@ public class OpcodeBuilder {
                 opcodeObject.addOp(new EmptyCycle());
                 opcodeObject.setDestinationOperandString("PC");
                 opcodeObject.setDestinationType(DataType.R16);
+                opcodeObject.addOp(new FlipOperands(opcodeObject));
                 opcodeObject.addOp(new AluOperation(
                         AluOperation.Type.ADD,
                         opcodeObject,

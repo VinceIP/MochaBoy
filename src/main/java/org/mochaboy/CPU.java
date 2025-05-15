@@ -195,6 +195,9 @@ public class CPU extends Thread {
 
                     boolean done = false;
                     while (!done) { //Make sure we continuously execute any operations that don't consume cycles
+                        if(currentOpcodeObject.getOpcodeInfo().getOpcode() == 0x18){
+                            System.out.println();
+                        }
                         MicroOperation executed = currentOpcodeObject.execute(this, memory);
                         //cyclesThisInstr += executed.getCycles();
                         MicroOperation nextOp = currentOpcodeObject.getMicroOps().peek();
@@ -206,7 +209,7 @@ public class CPU extends Thread {
                     }
                 } else {
                     //printDebug();
-                    System.out.println(currentOpcodeObject.toString());
+                    //System.out.println(currentOpcodeObject.toString());
                     cyclesThisInstr = currentOpcodeObject.getRealCycles();
                     //System.out.println(cyclesThisInstr);
                     built = false;
