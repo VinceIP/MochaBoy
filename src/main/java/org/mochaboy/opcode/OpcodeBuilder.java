@@ -179,7 +179,7 @@ public class OpcodeBuilder {
         opcodeObject.setSourceOperand(s);
         switch (s.getName()) {
             case "n8":
-                opcodeObject.setSourceType(DataType.A8);
+                opcodeObject.setSourceType(DataType.N8);
                 opcodeObject.addOp(
                         new ReadImmediate8bit(opcodeObject::setSourceValue)
                 );
@@ -189,12 +189,7 @@ public class OpcodeBuilder {
                 opcodeObject.addOp(
                         new ReadImmediate8bit(opcodeObject::setSourceValue, true)
                 );
-                opcodeObject.addOp(
-                        new ReadMemory8Bit(
-                                opcodeObject::setSourceValue,
-                                opcodeObject::getSourceValue
-                        )
-                );
+                //opcodeObject.addOp(new ReadMemory8Bit(opcodeObject::setSourceValue, opcodeObject::getSourceValue));
                 break;
             case "n16":
                 //Read integer constant value, then merge, set as operand 2
@@ -239,13 +234,20 @@ public class OpcodeBuilder {
             case "E":
             case "H":
             case "L":
-                opcodeObject.setSourceType(DataType.R8);
-                String m = opcodeInfo.getMnemonic();
-                //Stupid check to make sure INC and DEC get handled correctly. Trust me
-                if (m.equals("INC") || m.equals("DEC")) {
-                    opcodeObject.addOp(new ReadRegister8Bit(opcodeObject::setDestinationValue, s.getName()));
+                if (opcodeObject.getSourceOperand().isImmediate()) {
+                    opcodeObject.setSourceType(DataType.R8);
+                    String m = opcodeInfo.getMnemonic();
+                    //Stupid check to make sure INC and DEC get handled correctly. Trust me
+                    if (m.equals("INC") || m.equals("DEC")) {
+                        opcodeObject.addOp(new ReadRegister8Bit(opcodeObject::setDestinationValue, s.getName()));
+                        break;
+                    } else opcodeObject.addOp(new ReadRegister8Bit(opcodeObject::setSourceValue, s.getName()));
                     break;
-                } else opcodeObject.addOp(new ReadRegister8Bit(opcodeObject::setSourceValue, s.getName()));
+                } else {
+                    opcodeObject.setSourceType(DataType.A8);
+                    opcodeObject.addOp(new ReadRegister8Bit(opcodeObject::setSourceValue, s.getName()));
+                    //opcodeObject.addOp(new ReadMemory8Bit(opcodeObject::setSourceValue, opcodeObject::getSourceValue));
+                }
                 break;
             case "AF":
             case "BC":

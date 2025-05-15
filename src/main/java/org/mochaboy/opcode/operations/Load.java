@@ -15,7 +15,9 @@ public class Load implements MicroOperation {
 
     @Override
     public MicroOperation execute(CPU cpu, Memory memory) {
-
+        if(opcode.getOpcodeInfo().getOpcode() == 0x36){
+            System.out.println();
+        }
         Registers r = cpu.getRegisters();
         String ss = opcode.getSourceOperandString();
         String ds = opcode.getDestinationOperandString();
@@ -26,7 +28,13 @@ public class Load implements MicroOperation {
         //Get the value to be copied
         if (sourceType == DataType.R8 || sourceType == DataType.R16) {
             source = r.getByName(ss); //Pull the source value from a register
-        } else {
+        }
+        else if(sourceType == DataType.A8){
+            //source = 0xFF00 | opcode.getSourceValue();
+            int a = (0xFF00 | opcode.getSourceValue()) & 0xFFFF;
+            source = memory.readByte(a);
+        }
+        else {
             //If ss is a register but not immediate, or explicitly "a8", "n8", "n16", we expect a source value to be in the opcode
             source = opcode.getSourceValue();
         }
