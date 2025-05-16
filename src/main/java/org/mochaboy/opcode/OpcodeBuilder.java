@@ -295,10 +295,10 @@ public class OpcodeBuilder {
                             new ReadRegister16Bit(opcodeObject::setSourceValue, s.getName())
                     );
                     opcodeObject.addOp(
-                            new ReadMemory16Bit(opcodeObject::setSourceValue, opcodeObject::getSourceValue)
+                            new ReadMemory8Bit(opcodeObject::setSourceValue, opcodeObject::getSourceValue)
                     );
+                    break;
                 }
-                break;
         }
     }
 
@@ -317,9 +317,11 @@ public class OpcodeBuilder {
             case "CP" -> opcodeObject.addOp(
                     new AluOperation(AluOperation.Type.CP, opcodeObject, opcodeObject::getDestinationValue, opcodeObject::getSourceValue)
             );
-            case "DEC" -> opcodeObject.addOp(
-                    new AluOperation(AluOperation.Type.DEC, opcodeObject, opcodeObject::getDestinationValue, opcodeObject::getSourceValue)
-            );
+            case "DEC" -> {
+                opcodeObject.addOp(
+                        new AluOperation(AluOperation.Type.DEC, opcodeObject, opcodeObject::getDestinationValue, opcodeObject::getSourceValue)
+                );
+            }
             case "INC" -> opcodeObject.addOp(
                     new AluOperation(AluOperation.Type.INC, opcodeObject, opcodeObject::getDestinationValue, opcodeObject::getSourceValue)
             );
@@ -384,6 +386,7 @@ public class OpcodeBuilder {
                 );
             }
             case "RLA" -> {
+                opcodeObject.addOp(new ReadRegister8Bit(opcodeObject::setDestinationValue, "A"));
                 opcodeObject.addOp(
                         new BitShiftOperation(BitShiftOperation.Type.RLA, opcodeObject, opcodeObject::getDestinationValue)
                 );
@@ -394,6 +397,7 @@ public class OpcodeBuilder {
                 );
             }
             case "RLCA" -> {
+                opcodeObject.addOp(new ReadRegister8Bit(opcodeObject::setDestinationValue, "A"));
                 opcodeObject.addOp(
                         new BitShiftOperation(BitShiftOperation.Type.RLCA, opcodeObject, opcodeObject::getDestinationValue)
                 );
@@ -404,6 +408,7 @@ public class OpcodeBuilder {
                 );
             }
             case "RRA" -> {
+                opcodeObject.addOp(new ReadRegister8Bit(opcodeObject::setDestinationValue, "A"));
                 opcodeObject.addOp(
                         new BitShiftOperation(BitShiftOperation.Type.RRA, opcodeObject, opcodeObject::getDestinationValue)
                 );
@@ -414,6 +419,7 @@ public class OpcodeBuilder {
                 );
             }
             case "RRCA" -> {
+                opcodeObject.addOp(new ReadRegister8Bit(opcodeObject::setDestinationValue, "A"));
                 opcodeObject.addOp(
                         new BitShiftOperation(BitShiftOperation.Type.RRCA, opcodeObject, opcodeObject::getDestinationValue)
                 );

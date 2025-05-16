@@ -78,7 +78,7 @@ public class AluOperation implements MicroOperation {
                 || opcode.getOpcodeInfo().getMnemonic().equals("JR")) { //If this is ADD SP, e8 or a JR;
             //System.out.printf("\n%04X", cpu.getRegisters().getPC());
             int signedDisp = (y << 24) >> 24; //Extend e8 to 32 bits
-            return (x + signedDisp);
+            return ((x + signedDisp) & 0xFFFF);
         } else {
             return (x + y) & (is16BitOperation ? 0xFFFF : 0xFF);
 
@@ -121,7 +121,6 @@ public class AluOperation implements MicroOperation {
             //Writes result to memory for INC [HL], DEC [HL]
             int addr = opcode.getDestinationValue();
             cpu.getMemory().writeByte(addr, result & 0xFF);
-            cpu.getMemory().writeByte(addr + 1, (result >> 8) & 0xFF);
         } else {
             if (Registers.isValidRegister(cpu, destinationRegister)) {
                 cpu.getRegisters().setByName(destinationRegister, result);

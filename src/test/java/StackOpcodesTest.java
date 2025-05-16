@@ -33,9 +33,7 @@ class StackOpcodesTest {
     void testAddHlSp() {
         cpu.getRegisters().setHL(0x1000);
         cpu.getRegisters().setSP(0x0100);
-        memory.writeByteUnrestricted(0, 0xE8); // incorrect opcode—replace with correct
-        // TODO: correct opcode for ADD HL,SP is 0x09
-        memory.writeByteUnrestricted(0, 0x09);
+        memory.writeByteUnrestricted(0, 0x39);
         while (!cpu.isTestStepComplete()) cpu.step();
         assertEquals(0x1100, cpu.getRegisters().getHL());
         // Flags: N=0, H=carry from bit 11?
@@ -109,33 +107,44 @@ class StackOpcodesTest {
     @Test
     void testPopAf() {
         cpu.getRegisters().setSP(0x1000);
-        memory.writeByteUnrestricted(0x1000, 0x34);
-        memory.writeByteUnrestricted(0x1001, 0x12);
-        memory.writeByteUnrestricted(0, 0xF1);
+        memory.writeByteUnrestricted(0x1000, 0x34);   // low byte (flags)
+        memory.writeByteUnrestricted(0x1001, 0x12);   // high byte (A)
+        memory.writeByteUnrestricted(0, 0xF1);        // POP AF
         while (!cpu.isTestStepComplete()) cpu.step();
-        assertEquals(0x1234, cpu.getRegisters().getAF());
+
+        // lower nibble of F must be 0
+        assertEquals(0x1230, cpu.getRegisters().getAF());
         assertEquals(0x1002, cpu.getRegisters().getSP());
     }
 
+
     static Stream<Arguments> pop16Provider() {
         return Stream.of(
-                arguments("POP BC", 0xC1, "BC"),
-                arguments("POP DE", 0xD1, "DE"),
-                arguments("POP HL", 0xE1, "HL"),
-                arguments("POP AF", 0xF1, "AF")
+                arguments("POP BC", 0xC1, 0x56, 0x78, "BC", 0x5678),
+                arguments("POP DE", 0xD1, 0x56, 0x78, "DE", 0x5678),
+                arguments("POP HL", 0xE1, 0x56, 0x78, "HL", 0x5678),
+                arguments("POP AF", 0xF1, 0x56, 0x78, "AF", 0x5670) // ← mask low nibble
         );
     }
 
     @ParameterizedTest(name = "{0}")
     @MethodSource("pop16Provider")
-    void testPop16(String name, int opcode, String reg) {
+    void testPop16(String name,
+                   int opcode,
+                   int high, int low,
+                   String reg,
+                   int expected) {
+
         cpu.getRegisters().setSP(0x2000);
-        memory.writeByteUnrestricted(0x2000, 0x78);
-        memory.writeByteUnrestricted(0x2001, 0x56);
+        memory.writeByteUnrestricted(0x2000, low);
+        memory.writeByteUnrestricted(0x2001, high);
         memory.writeByteUnrestricted(0, opcode);
         while (!cpu.isTestStepComplete()) cpu.step();
-        assertEquals(0x5678, cpu.getRegisters().getByName(reg));
+
+        assertEquals(expected, cpu.getRegisters().getByName(reg));
+        assertEquals(0x2002, cpu.getRegisters().getSP());
     }
+
 
     static Stream<Arguments> push16Provider() {
         return Stream.of(

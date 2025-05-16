@@ -12,6 +12,7 @@ public class BitShiftOperation implements MicroOperation {
     private final Supplier<Integer> targetValue;
     private final Opcode opcode;
     private int result;
+    private int msb;
 
     public BitShiftOperation(Type type, Opcode opcode, Supplier<Integer> targetValue) {
         this.type = type;
@@ -23,32 +24,37 @@ public class BitShiftOperation implements MicroOperation {
     @Override
     public MicroOperation execute(CPU cpu, Memory memory) {
         int v = targetValue != null ? targetValue.get() : 0;
-
+        if (opcode.getOpcodeInfo().getOperands().length > 0 && opcode.getOpcodeInfo().getOperands()[0].getName().equals("HL")) {
+            v = memory.readWord(v);
+        }
+        msb = ((v >> 7) & 1);
         switch (type) {
             case RL, RLA -> {
                 int carryIn = cpu.getRegisters().isFlagSet(Registers.FLAG_CARRY) ? 1 : 0;
                 result = ((v << 1) | carryIn) & 0xFF;
             }
             case RLC, RLCA -> {
-                int out = v >> 7;
-                result = ((v << 1) | out) & 0xFF;
+                result = (v << 1) & 0xFF;
             }
             case RR, RRA -> {
                 int carryIn = cpu.getRegisters().isFlagSet(Registers.FLAG_CARRY) ? 1 : 0;
+                int out = v & 0x01;
                 result = ((v >>> 1) | (carryIn << 7)) & 0xFF;
+                msb = out;
             }
             case RRC, RRCA -> {
                 int out = v & 0x01;
                 result = ((v >>> 1) | (out << 7)) & 0xFF;
+                msb = out;
             }
             case SLA -> {
                 result = (v << 1) & 0xFF;
             }
             case SRA -> {
-                int carry = (v & 0x80);
-                result = ((v >> 1) | carry) & 0xFF;
+                result = (v >> 1) & 0xFF;
             }
             case SRL -> {
+                msb = v & 1;
                 result = (v >> 1) & 0xFF;
             }
             case SWAP -> {
@@ -72,6 +78,8 @@ public class BitShiftOperation implements MicroOperation {
                 return;
             }
         }
+        opcode.setDestinationValue(result); //Update value so flag calc can read it - this may be a problem elsewhere too
+        opcode.setSourceValue(msb);
         cpu.getRegisters().setByName(destRegister, result);
     }
 

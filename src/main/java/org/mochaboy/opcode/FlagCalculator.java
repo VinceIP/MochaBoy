@@ -32,20 +32,18 @@ public class FlagCalculator {
                     conditions.isCarry = (lowSp + e8) > 0xFF;
                     break;
                 //values of any 16-bit register
-                case "AF":
-                case "BC":
-                case "DE":
-                case "HL":
-                case "SP":
-                case "PC":
-                    //conditions.isZero = ((xVal + yVal) & 0xFF) == 0;
-                    conditions.isHalfCarry = (((xVal & 0x0FFF) + (yVal & 0x0FFF)) & 0x1000) != 0;
-                    conditions.isCarry = ((xVal & 0xFFFF) + (yVal & 0xFFFF)) > 0xFFFF;
-                    break;
+                case "AF": case "BC": case "DE": case "HL": case "SP": case "PC":
+                    if (operands[0].getName().length() > 1) {       // dest is 16-bit?
+                        conditions.isZero = ((xVal + yVal) & 0xFFFF) == 0;
+                        conditions.isHalfCarry = (((xVal & 0x0FFF) + (yVal & 0x0FFF)) & 0x1000) != 0;
+                        conditions.isCarry     = (xVal + yVal) > 0xFFFF;
+                        break;
+                    }
                 default:
                     conditions.isZero = ((xVal + yVal) & 0xFF) == 0;
                     conditions.isHalfCarry = (xVal & 0xF) + (yVal & 0xF) > 0xF;
                     conditions.isCarry = (xVal + yVal) > 0xFF;
+                    break;
             }
             return conditions;
         });
@@ -63,9 +61,9 @@ public class FlagCalculator {
             FlagConditions conditions = new FlagConditions();
             //Flags only affected under these conditions
             if (Registers.isValidRegister(cpu, operands[0].getName())) {
-                conditions.isZero = ((xVal - 1) & 0xFF) == 0; // Much simpler and accurate
-                conditions.isHalfCarry = (xVal & 0xF) < 1;  // Correct half-carry logic
-                conditions.isSubtract = true; // Forgot to set this flag
+                conditions.isZero = ((xVal - 1) & 0xFF) == 0;
+                conditions.isHalfCarry = (xVal & 0x0F) == 0;
+                conditions.isSubtract = true;
             }
             return conditions;
         });
@@ -73,7 +71,7 @@ public class FlagCalculator {
         calculators.put("INC", (cpu, xVal, yVal, operands) -> {
             FlagConditions conditions = new FlagConditions();
             if (Registers.isValidRegister(cpu, operands[0].getName())) {
-                conditions.isZero = ((xVal + yVal) & 0xFF) == 0;
+                conditions.isZero = ((xVal + 1) & 0xFF) == 0;
                 conditions.isHalfCarry = (xVal & 0xF) + (yVal & 0xF) > 0xF;
             }
             return conditions;
@@ -118,11 +116,8 @@ public class FlagCalculator {
 
         calculators.put("RL", (cpu, xVal, yVal, operands) -> {
             FlagConditions conditions = new FlagConditions();
-            int carryIn = cpu.getRegisters().isFlagSet(Registers.FLAG_CARRY) ? 1 : 0;
-            int carryOut = (xVal >> 7) & 1;
-            xVal = ((xVal << 1) | carryIn) & 0xFF;
             conditions.isZero = (xVal == 0);
-            conditions.isCarry = (carryOut == 1);
+            conditions.isCarry = (yVal == 1);
             return conditions;
         });
 
@@ -173,25 +168,22 @@ public class FlagCalculator {
 
         calculators.put("SLA", (cpu, xVal, yVal, operands) -> {
             FlagConditions conditions = new FlagConditions();
-            int result = (xVal << 1) & 0xFF;
-            conditions.isZero = (result == 0);
-            conditions.isCarry = ((xVal & 0x80) != 0);
+            conditions.isZero = (xVal == 0);
+            conditions.isCarry = (yVal == 1);
             return conditions;
         });
 
         calculators.put("SRA", (cpu, xVal, yVal, operands) -> {
             FlagConditions conditions = new FlagConditions();
-            int result = (xVal >> 1) & 0xFF;
-            conditions.isZero = (result == 0);
-            conditions.isCarry = ((xVal & 0x01) != 0);
+            conditions.isZero = (xVal == 0);
+            conditions.isCarry = (yVal == 1);
             return conditions;
         });
 
         calculators.put("SRL", (cpu, xVal, yVal, operands) -> {
             FlagConditions conditions = new FlagConditions();
-            int result = xVal >> 1;
-            conditions.isZero = (result == 0);
-            conditions.isCarry = ((xVal & 0x1) != 0);
+            conditions.isZero = (xVal == 0);
+            conditions.isCarry = (yVal == 1);
             return conditions;
         });
 
@@ -232,17 +224,11 @@ public class FlagCalculator {
 
         calculators.put("POP", (cpu, xVal, yVal, operands) -> {
             FlagConditions conditions = new FlagConditions();
-            int poppedVal = xVal & 0xF0; //Get low byte and zero out lower nibble
-            //Flags are set based on bits in poppedVal
-            cpu.getRegisters().setFlag(Registers.FLAG_ZERO,
-                    (poppedVal & 0x80) > 0
-            );
-            cpu.getRegisters().setFlag(Registers.FLAG_SUBTRACT,
-                    (poppedVal & 0x40) > 0);
-            cpu.getRegisters().setFlag(Registers.FLAG_HALF_CARRY,
-                    (poppedVal & 0x20) > 0);
-            cpu.getRegisters().setFlag(Registers.FLAG_CARRY,
-                    (poppedVal & 0x10) > 0);
+            int low = xVal & 0xFF;
+            conditions.isZero = ((low & 0x80) != 0);
+            conditions.isSubtract = ((low & 0x40) != 0);
+            conditions.isHalfCarry = ((low & 0x20) != 0);
+            conditions.isCarry = ((low & 0x10) != 0);
             return conditions;
         });
 

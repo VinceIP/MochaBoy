@@ -86,6 +86,12 @@ public class Memory {
         value = value & 0xFF;
         address = address & 0xFFFF;
 
+        if(address == 0x8010){
+            System.out.println();
+        }
+
+        if (ppu !=null && !ppu.isLcdEnabled()) { vramBlocked = false; }
+
         if (cpu.isTestMode()) {
             writeByteUnrestricted(address, value);
             return;
@@ -98,7 +104,6 @@ public class Memory {
         }
 
         //Prohibited usage
-        //Look into OAM corruption bug when writes are requested here
         if (address >= map.get("OAM_START") && address <= map.get("OAM_END")) {
             if (oamBlocked) return;
         }

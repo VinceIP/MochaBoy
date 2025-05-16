@@ -202,7 +202,12 @@ public class CPU extends Thread {
 //                        }
                         // // //
 
-
+//                        if(currentOpcodeObject.getFetchedAt() == 0x0099 && registers.getA() == 0x3C){
+//                            System.out.println();
+//                        }
+                        if(currentOpcodeObject.getFetchedAt() == 0x0028){
+                            System.out.println();
+                        }
                         MicroOperation executed = currentOpcodeObject.execute(this, memory);
 
                         /*
@@ -234,8 +239,8 @@ public class CPU extends Thread {
                     //System.out.println(currentOpcodeObject.toString());
                     //System.out.printf("… real PC is %04X\n", registers.getPC());
                     if (registers.getPC() == 0x00FA) {
-                        System.out.println(currentOpcodeObject.toString());
-                        //ppu.printVRAM();
+                        //System.out.println(currentOpcodeObject.toString());
+                        ppu.printVRAM();
                     }
                     cyclesThisInstr = currentOpcodeObject.getRealCycles();
                     //System.out.println(cyclesThisInstr);

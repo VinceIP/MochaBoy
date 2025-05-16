@@ -151,6 +151,11 @@ public class Registers {
         F = val & 0xF0; // Mask out the lower nibble
     }
 
+    public void setAFUnmasked(int val){
+        A = (val >> 8) & 0xFF;
+        F = val & 0xFF;
+    }
+
     public int getBC() {
         return (B << 8) | C;
     }
