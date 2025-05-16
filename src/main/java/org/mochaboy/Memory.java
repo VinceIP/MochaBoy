@@ -109,7 +109,7 @@ public class Memory {
 
         if (address == 0xFF50) {
             bootRomEnabled = false;
-            //System.out.println("Boot rom disabled.");
+            System.out.println("Boot rom disabled.");
         }
         // Reset DIV if writing to DIV register
         else if (address == map.get("DIV")) {

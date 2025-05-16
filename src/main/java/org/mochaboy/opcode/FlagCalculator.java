@@ -317,6 +317,7 @@ public class FlagCalculator {
         switch (flags.getN()) {
             case "N":
                 r.setFlag(Registers.FLAG_SUBTRACT, conditions.isSubtract);
+                break;
             case "0":
                 r.clearFlag(Registers.FLAG_SUBTRACT);
                 break;

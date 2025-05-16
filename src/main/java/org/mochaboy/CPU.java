@@ -76,9 +76,11 @@ public class CPU extends Thread {
         running = true;
         long frameStart = System.nanoTime();
         state = CPUState.FETCH;
+        //testMode = true;
 
         while (running) {
             if (!isHalt()) {
+
                 int cycles = halt ? 0 : step(); //Step if not in HALT
 
                 tickTimers(cycles);
@@ -145,8 +147,6 @@ public class CPU extends Thread {
 
 
     public int step() {
-
-
         int cyclesThisInstr = 0;
 
         switch (state) {
@@ -165,13 +165,6 @@ public class CPU extends Thread {
                     if (testMode) {
                         currentOpcodeObject = opcodeBuilder.build(opcode, fetchedCb);
                     } else currentOpcodeObject = opcodeBuilder.build(fetchedAt, opcode, fetchedCb);
-//                    if (fetchedAt == 0x0064) {
-//                        int ly = memory.readByteUnrestricted(0xFF44);
-//                        System.out.printf("DEBUG: about to LDH A,(FF44) A<-%02X  (PPU LY=%d)\n", ly, ly);
-//                    }
-//                    if (fetchedAt == 0x0066) {
-//                        System.out.printf("DEBUG: A=%02X  CP with #$%02X -> ", registers.getA(), currentOpcodeObject.getSourceValue());
-//                    }
 
                     fetchedCb = false;
                     built = true;
@@ -195,10 +188,39 @@ public class CPU extends Thread {
 
                     boolean done = false;
                     while (!done) { //Make sure we continuously execute any operations that don't consume cycles
-                        if(currentOpcodeObject.getOpcodeInfo().getOpcode() == 0x18){
-                            System.out.println();
+                        if (currentOpcodeObject.getOpcodeInfo().getOpcode() == 0xC9) {
+                            //System.out.println();
                         }
+                        int pc = registers.getPC();
+                        int aBefore = 0;
+                        //DEBUG
+//                        if (pc >= 0x00F4 && pc <= 0x00FA && currentOpcodeObject.getMicroOps().peek() instanceof AluOperation) {
+//                            aBefore = registers.getA();
+//
+//                        } else if (pc >= 0x00F4 && pc <= 0x00FA && currentOpcodeObject.getOpcodeInfo().getMnemonic().equals("JR") && registers.isFlagSet(Registers.FLAG_ZERO)) {
+//                            System.out.println();
+//                        }
+                        // // //
+
+
                         MicroOperation executed = currentOpcodeObject.execute(this, memory);
+
+                        /*
+                        // ------ Debug hook start ------
+                        // If we're inside the header-sum routine (PC in 0x00F4-0x00FA) and it's an ADD op:
+                        if (pc >= 0x00F4 && pc <= 0x00FA && executed instanceof AluOperation) {
+                            int hl = registers.getHL();
+                            int memVal = memory.readByteUnrestricted(hl);
+                            System.out.printf("Logo-sum step at PC=0x%04X: HL=0x%04X, (HL)=0x%02X, A before add=0x%02X, A after add=0x%02X\n",
+                                    pc, hl, memVal, aBefore, registers.getA());
+                            boolean z = registers.isFlagSet(Registers.FLAG_ZERO);
+                            System.out.printf(" → Z=%b\n", z);
+                            if (z) {
+                                System.out.println();
+                            }
+                        }
+                        // ------ Debug hook end ------
+                        */
                         //cyclesThisInstr += executed.getCycles();
                         MicroOperation nextOp = currentOpcodeObject.getMicroOps().peek();
                         if (nextOp == null) {
@@ -210,11 +232,19 @@ public class CPU extends Thread {
                 } else {
                     //printDebug();
                     //System.out.println(currentOpcodeObject.toString());
+                    //System.out.printf("… real PC is %04X\n", registers.getPC());
+                    if (registers.getPC() == 0x00FA) {
+                        System.out.println(currentOpcodeObject.toString());
+                        //ppu.printVRAM();
+                    }
                     cyclesThisInstr = currentOpcodeObject.getRealCycles();
                     //System.out.println(cyclesThisInstr);
                     built = false;
                     state = CPUState.FETCH;
                     testStepComplete = true;
+                    if (registers.getPC() == 0x00F1) {
+                        printHRAM();
+                    }
                 }
             }
         }
@@ -405,6 +435,14 @@ public class CPU extends Thread {
 
     public void setTestMode(boolean testMode) {
         this.testMode = testMode;
+    }
+
+    public boolean isBuilt() {
+        return built;
+    }
+
+    public void setBuilt(boolean built) {
+        this.built = built;
     }
 
     public void printHRAM() {

@@ -153,6 +153,7 @@ class SubroutineOpcodesTest {
     @MethodSource("retCcProvider")
     void testRetConditional(String name, int opcode, String flag) {
         // push return address 0x1234
+        cpu.getRegisters().setSP(0x1000);
         memory.writeByteUnrestricted(cpu.getRegisters().getSP(), 0x34);
         memory.writeByteUnrestricted(cpu.getRegisters().getSP()+1, 0x12);
         cpu.getRegisters().setFlag(
@@ -166,8 +167,9 @@ class SubroutineOpcodesTest {
 
     @Test
     void testRet() {
-        memory.writeByteUnrestricted(cpu.getRegisters().getSP(), 0x78);
-        memory.writeByteUnrestricted(cpu.getRegisters().getSP()+1, 0x56);
+        cpu.getRegisters().setSP(0x1000);
+        memory.writeByteUnrestricted(cpu.getRegisters().getSP(),0x78);
+        memory.writeByteUnrestricted(cpu.getRegisters().getSP() + 1, 0x56);
         memory.writeByteUnrestricted(0, 0xC9);
         while (!cpu.isTestStepComplete()) cpu.step();
         assertEquals(0x5678, cpu.getRegisters().getPC());
@@ -175,6 +177,7 @@ class SubroutineOpcodesTest {
 
     @Test
     void testReti() {
+        cpu.getRegisters().setSP(0x1000);
         memory.writeByteUnrestricted(cpu.getRegisters().getSP(), 0x11);
         memory.writeByteUnrestricted(cpu.getRegisters().getSP()+1, 0x22);
         memory.writeByteUnrestricted(0, 0xD9);

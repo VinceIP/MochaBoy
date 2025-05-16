@@ -40,7 +40,12 @@ public class Opcode {
     public MicroOperation execute(CPU cpu, Memory memory) {
         MicroOperation mo = microOps.pop();
         mo.execute(cpu, memory);
-        if (microOps.isEmpty()|| killRemainingOps) operationsRemaining = false;
+        if (killRemainingOps) {
+            microOps.clear();
+            operationsRemaining = false;
+        } else if (microOps.isEmpty()) {
+            operationsRemaining = false;
+        }
         return mo;
     }
 

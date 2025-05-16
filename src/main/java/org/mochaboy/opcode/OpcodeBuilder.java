@@ -34,7 +34,7 @@ public class OpcodeBuilder {
                 opcodeWrapper.getCbprefixed().get(hexKey) : opcodeWrapper.getUnprefixed().get(hexKey);
         opcodeObject.setOpcodeInfo(opcodeInfo);
 
-        if(opcodeObject.getOpcodeInfo().getOpcode() == 0xDA){
+        if (opcodeObject.getOpcodeInfo().getOpcode() == 0xDA) {
             System.out.println();
         }
 
@@ -107,6 +107,12 @@ public class OpcodeBuilder {
         opcodeObject.setDestinationOperandString(d.getName());
         opcodeObject.setDestinationOperand(d);
         switch (d.getName()) {
+            case "e8" -> {
+                //Should only appear in JR n8 (aka JR n16)
+                //Will end in imaginary ADD PC, e8? so setup source value here
+                opcodeObject.setSourceType(DataType.E8);
+                opcodeObject.addOp(new ReadImmediate8bit(opcodeObject::setSourceValue));
+            }
             case "a8" -> {
                 //Only occurs in LDH
                 opcodeObject.setDestinationType(DataType.A8);
@@ -527,12 +533,12 @@ public class OpcodeBuilder {
                 opcodeObject.addOp(new EmptyCycle());
                 opcodeObject.setDestinationOperandString("PC");
                 opcodeObject.setDestinationType(DataType.R16);
-                opcodeObject.addOp(new FlipOperands(opcodeObject));
+                //opcodeObject.addOp(new FlipOperands(opcodeObject));
                 opcodeObject.addOp(new AluOperation(
                         AluOperation.Type.ADD,
                         opcodeObject,
                         () -> cpu.getRegisters().getPC(),
-                        () -> (int) (byte) opcodeObject.getSourceValue()
+                        opcodeObject::getSourceValue
                 ));
 
             }

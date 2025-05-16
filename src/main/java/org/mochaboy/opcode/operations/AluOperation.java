@@ -42,6 +42,8 @@ public class AluOperation implements MicroOperation {
             case ADC -> result = adc(cpu, x, y);
             case ADD -> result = add(x, y, cpu);
             case CP -> {
+                opcode.setSourceValue(y);
+                opcode.setDestinationValue(x);
                 return this; //FlagCalculator handles CP
             }
             case DEC -> result = dec(x);
