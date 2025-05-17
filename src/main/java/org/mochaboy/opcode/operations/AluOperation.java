@@ -46,8 +46,8 @@ public class AluOperation implements MicroOperation {
                 opcode.setDestinationValue(x);
                 return this; //FlagCalculator handles CP
             }
-            case DEC -> result = dec(x);
-            case INC -> result = inc(x);
+            case DEC -> result = dec(x, memory);
+            case INC -> result = inc(x, memory);
             case SBC -> result = sbc(cpu, x, y);
             case SUB -> result = sub(x, y);
             case POST_DEC -> {
@@ -85,12 +85,14 @@ public class AluOperation implements MicroOperation {
         }
     }
 
-    private int inc(int x) {
+    private int inc(int x, Memory memory) {
+        if(!opcode.getDestinationOperand().isImmediate()) x = pullXFromMem(memory, x);
         x = (x + 1) & (is16BitOperation ? 0xFFFF : 0xFF);
         return x;
     }
 
-    private int dec(int x) {
+    private int dec(int x, Memory memory) {
+        if(!opcode.getDestinationOperand().isImmediate()) x = pullXFromMem(memory, x);
         x = (x - 1) & (is16BitOperation ? 0xFFFF : 0xFF);
         return x;
     }
@@ -102,6 +104,10 @@ public class AluOperation implements MicroOperation {
 
     private int sub(int x, int y) {
         return (x - y) & 0xFF;
+    }
+
+    private int pullXFromMem(Memory memory, int address){
+        return memory.readByte(address);
     }
 
     @Override

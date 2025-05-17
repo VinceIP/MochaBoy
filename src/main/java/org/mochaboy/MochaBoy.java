@@ -14,7 +14,7 @@ public class MochaBoy {
 //            return;
 //        } else {
         //String romFile = args[0];
-        String romFile = "./././Tetris.gb";
+        String romFile = "Tetris.gb";
         Path path = Paths.get(romFile);
         try {
             Cartridge cartridge = new Cartridge(path);

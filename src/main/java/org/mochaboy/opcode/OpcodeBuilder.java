@@ -357,16 +357,16 @@ public class OpcodeBuilder {
 
             //Bitwise operations
             case "AND" -> opcodeObject.addOp(
-                    new BitwiseOperation(BitwiseOperation.Type.AND, opcodeObject::getSourceValue)
+                    new BitwiseOperation(BitwiseOperation.Type.AND, opcodeObject, opcodeObject::getSourceValue)
             );
             case "CPL" -> opcodeObject.addOp(
-                    new BitwiseOperation(BitwiseOperation.Type.CPL, opcodeObject::getSourceValue)
+                    new BitwiseOperation(BitwiseOperation.Type.CPL, opcodeObject, opcodeObject::getSourceValue)
             );
             case "OR" -> opcodeObject.addOp(
-                    new BitwiseOperation(BitwiseOperation.Type.OR, opcodeObject::getSourceValue)
+                    new BitwiseOperation(BitwiseOperation.Type.OR, opcodeObject, opcodeObject::getSourceValue)
             );
             case "XOR" -> opcodeObject.addOp(
-                    new BitwiseOperation(BitwiseOperation.Type.XOR, opcodeObject::getSourceValue)
+                    new BitwiseOperation(BitwiseOperation.Type.XOR, opcodeObject, opcodeObject::getSourceValue)
             );
 
             //Bit flag operations

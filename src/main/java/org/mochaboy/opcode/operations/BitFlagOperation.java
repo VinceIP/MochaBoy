@@ -3,6 +3,7 @@ package org.mochaboy.opcode.operations;
 import org.mochaboy.CPU;
 import org.mochaboy.Memory;
 import org.mochaboy.opcode.Opcode;
+import org.mochaboy.registers.Registers;
 
 import java.util.function.Supplier;
 
@@ -38,10 +39,12 @@ public class BitFlagOperation implements MicroOperation {
     }
 
     public void applyResult(CPU cpu) {
-        if (opcode.getSourceOperand().isRegister()) {
+        if (Registers.isValidRegister(cpu, opcode.getSourceOperand().getName()) && opcode.getSourceOperand().isImmediate()) {
             cpu.getRegisters().setByName(opcode.getSourceOperandString(), result);
+        } else {
+            int addr = cpu.getRegisters().getHL();
+            cpu.getMemory().writeByte(addr, result);
         }
-        else cpu.getMemory().writeByte(opcode.getSourceValue(), result);
     }
 
     @Override

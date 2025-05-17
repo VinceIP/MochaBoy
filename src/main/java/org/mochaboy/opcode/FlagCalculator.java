@@ -60,20 +60,16 @@ public class FlagCalculator {
         calculators.put("DEC", (cpu, xVal, yVal, operands) -> {
             FlagConditions conditions = new FlagConditions();
             //Flags only affected under these conditions
-            if (Registers.isValidRegister(cpu, operands[0].getName())) {
                 conditions.isZero = ((xVal - 1) & 0xFF) == 0;
                 conditions.isHalfCarry = (xVal & 0x0F) == 0;
                 conditions.isSubtract = true;
-            }
             return conditions;
         });
 
         calculators.put("INC", (cpu, xVal, yVal, operands) -> {
             FlagConditions conditions = new FlagConditions();
-            if (Registers.isValidRegister(cpu, operands[0].getName())) {
                 conditions.isZero = ((xVal + 1) & 0xFF) == 0;
                 conditions.isHalfCarry = (xVal & 0xF) + (yVal & 0xF) > 0xF;
-            }
             return conditions;
         });
 
@@ -82,7 +78,7 @@ public class FlagCalculator {
             int carry = cpu.getRegisters().isFlagSet(Registers.FLAG_CARRY) ? 1 : 0;
             conditions.isZero = ((xVal - (yVal + carry)) & 0xFF) == 0;
             conditions.isHalfCarry = ((xVal ^ yVal ^ ((xVal - (yVal + carry)) & 0xFF)) & 0x10) != 0; //My brain
-            conditions.isCarry = (yVal + carry) > cpu.getRegisters().getA();
+            conditions.isCarry = (yVal + carry) > xVal;
             return conditions;
         });
 
@@ -90,7 +86,7 @@ public class FlagCalculator {
             FlagConditions conditions = new FlagConditions();
             conditions.isZero = ((xVal - (yVal)) & 0xFF) == 0;
             conditions.isHalfCarry = ((xVal ^ yVal ^ ((xVal - yVal) & 0xFF)) & 0x10) != 0; //My brain
-            conditions.isCarry = (yVal > cpu.getRegisters().getA());
+            conditions.isCarry = (yVal > xVal);
             return conditions;
         });
     }
@@ -214,8 +210,7 @@ public class FlagCalculator {
 
     private void registerMiscCalculators() {
         calculators.put("CPL", (cpu, xVal, yVal, operands) -> {
-            FlagConditions conditions = new FlagConditions();
-            return conditions;
+            return null;
         });
         calculators.put("DAA", (cpu, xVal, yVal, operands) -> {
             FlagConditions conditions = new FlagConditions();

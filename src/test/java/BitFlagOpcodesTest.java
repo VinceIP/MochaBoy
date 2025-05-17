@@ -84,7 +84,7 @@ class BitFlagOpcodesTest {
         return Stream.of(
                 arguments("RES 0,B", 0x80, 0, "B"),
                 arguments("RES 7,A", 0xBF, 7, "A"),
-                arguments("RES 3,(HL)", 0x8E, 3, null)
+                arguments("RES 3,(HL)", 0x9E, 3, null)
         );
     }
 
@@ -116,7 +116,7 @@ class BitFlagOpcodesTest {
         return Stream.of(
                 arguments("SET 0,B", 0xC0, 0, "B"),
                 arguments("SET 7,A", 0xFF, 7, "A"),
-                arguments("SET 3,(HL)", 0xCE, 3, null)
+                arguments("SET 3,(HL)", 0xDE, 3, null)
         );
     }
 

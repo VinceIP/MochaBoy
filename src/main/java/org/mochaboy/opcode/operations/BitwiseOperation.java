@@ -2,6 +2,7 @@ package org.mochaboy.opcode.operations;
 
 import org.mochaboy.CPU;
 import org.mochaboy.Memory;
+import org.mochaboy.opcode.Opcode;
 import org.mochaboy.registers.Registers;
 
 import java.util.function.Supplier;
@@ -9,11 +10,13 @@ import java.util.function.Supplier;
 public class BitwiseOperation implements MicroOperation {
     private final Supplier<Integer> sourceValue;
     private final Type type;
+    private final Opcode opcode;
     private int result;
 
-    public BitwiseOperation(Type type, Supplier<Integer> sourceValue) {
+    public BitwiseOperation(Type type, Opcode opcode, Supplier<Integer> sourceValue) {
         this.sourceValue = sourceValue;
         this.type = type;
+        this.opcode = opcode;
     }
 
     @Override
