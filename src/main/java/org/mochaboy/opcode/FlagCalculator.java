@@ -69,7 +69,7 @@ public class FlagCalculator {
         calculators.put("INC", (cpu, xVal, yVal, operands) -> {
             FlagConditions conditions = new FlagConditions();
                 conditions.isZero = ((xVal + 1) & 0xFF) == 0;
-                conditions.isHalfCarry = (xVal & 0xF) + (yVal & 0xF) > 0xF;
+                conditions.isHalfCarry = ((xVal & 0xF) + (1 & 0xF)) > 0xF;
             return conditions;
         });
 

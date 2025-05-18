@@ -34,9 +34,6 @@ public class OpcodeBuilder {
                 opcodeWrapper.getCbprefixed().get(hexKey) : opcodeWrapper.getUnprefixed().get(hexKey);
         opcodeObject.setOpcodeInfo(opcodeInfo);
 
-        if (opcodeObject.getOpcodeInfo().getOpcode() == 0xDA) {
-            System.out.println();
-        }
 
         //Build opcode
         buildMicroOpsFromOperands(opcodeObject, opcodeInfo);

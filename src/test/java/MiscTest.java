@@ -28,8 +28,8 @@ public class MiscTest {
 
     static Stream<Arguments> incDecMem() {
         return Stream.of(
-                arguments("INC [HL] (0)", 0x34, "HL", 0x7999, 0x00, 1, false, false, false, false),
-                arguments("INC [HL] (FF", 0x34, "HL", 0x7999, 0xFF, 0, true, false, true, false)
+                arguments("INC [HL] (0)", 0x34, "HL", 0x7000, 0x00, 1, false, false, false, false),
+                arguments("INC [HL] (FF", 0x34, "HL", 0x7000, 0xFF, 0, true, false, true, false)
         );
     }
 
@@ -39,6 +39,8 @@ public class MiscTest {
                     int address, int value, int expected,
                     boolean expectedZ, boolean expectedN, boolean expectedH, boolean expectedC) {
         cpu.getRegisters().setByName(srcReg, value);
+        System.out.printf("%04X: %04X\n", address, memory.readByte(address));
+        System.out.printf("%04X: %04X\n", address+1, memory.readByte(address+1));
         memory.writeByte(cpu.getRegisters().getByName(srcReg), value);
         memory.writeByte(cpu.getRegisters().getPC(), opcode);
 
@@ -46,10 +48,9 @@ public class MiscTest {
 
         int result = memory.readByte(cpu.getRegisters().getByName(srcReg));
 
-        StringBuilder sb = new StringBuilder();
         assertEquals(expected, result);
-        System.out.println(memory.readByte(cpu.getRegisters().getByName(srcReg)));
-        System.out.println(memory.readByte(cpu.getRegisters().getByName(srcReg))+1);
+        System.out.printf("%04X: %04X\n", address, memory.readByte(address));
+        System.out.printf("%04X: %04X\n", address+1, memory.readByte(address+1));
 
 
     }

@@ -119,7 +119,7 @@ class ArithmeticOpcodesTest {
 
                 arguments("CP A,D", 0xBA, "D", 0x20, 0x10, false, true, false, false),
                 arguments("CP A,n8", 0xFE, null, 0x00, 0x00, true, true, false, false),
-                arguments("CP A,(HL)", 0xBE, "HL", 0x05, 0x10, false, true, true, true)
+                arguments("CP A,(HL)", 0xBE, "HL", 0x05, 0x10, false, true, false, true)
         );
     }
 

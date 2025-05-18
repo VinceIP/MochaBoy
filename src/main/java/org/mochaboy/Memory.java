@@ -58,6 +58,10 @@ public class Memory {
             if (bootRomEnabled && address <= 0x00FF) {
                 return bootRom[address] & 0xFF;
             }
+
+            if(!bootRomEnabled && address <= 0x7FFF){
+                return cartridge.getCartData()[address];
+            }
             if (address == 0xFF01) {
                 return 0xFF;
             }
@@ -65,10 +69,16 @@ public class Memory {
                 return 0x7E;
             }
             return memory[address] & 0xFF;
-        } else return readByteUnrestricted(address);
+        }
+
+
+        else {
+            return readByteUnrestricted(address);
+        }
     }
 
     public int readByteUnrestricted(int address) {
+
         return memory[address] & 0xFF;
     }
 
@@ -86,11 +96,14 @@ public class Memory {
         value = value & 0xFF;
         address = address & 0xFFFF;
 
-        if(address == 0x8010){
-            System.out.println();
+        if (ppu != null && !ppu.isLcdEnabled()) {
+            vramBlocked = false;
         }
 
-        if (ppu !=null && !ppu.isLcdEnabled()) { vramBlocked = false; }
+        //If MBC = 0?
+        if (address == 0x2000) {
+            return;
+        }
 
         if (cpu.isTestMode()) {
             writeByteUnrestricted(address, value);
@@ -115,6 +128,7 @@ public class Memory {
         if (address == 0xFF50) {
             bootRomEnabled = false;
             System.out.println("Boot rom disabled.");
+            return;
         }
         // Reset DIV if writing to DIV register
         else if (address == map.get("DIV")) {

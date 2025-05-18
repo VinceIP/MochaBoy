@@ -53,6 +53,9 @@ public class CPU extends Thread {
     private boolean testStepComplete;
     private boolean testMode;
 
+    private boolean breaker = false;
+    private int breakerAddress = 0x27A3;
+
     public CPU(PPU ppu, Memory memory) throws IOException {
         this.ppu = ppu;
         this.memory = memory;
@@ -86,6 +89,10 @@ public class CPU extends Thread {
                 tickTimers(cycles);
                 if (IME) serviceInterrupts(); //Check interrupts if enabled
 
+                if(currentOpcodeObject!= null && currentOpcodeObject.getFetchedAt() == 0x0100){
+                    printHRAM();
+                    ppu.printVRAM();
+                }
                 ppu.step(cycles); //Run PPU for cycles this step
 
                 totalCycles += cycles;
@@ -99,6 +106,7 @@ public class CPU extends Thread {
                     //System.out.println("Sleep ms: " + sleepMs);
                     if (sleepMs > 0) try {
                         Thread.sleep((long) sleepMs);
+                        //Thread.sleep(100);
                     } catch (InterruptedException ignored) {
                     }
                     totalCycles -= CYCLES_PER_FRAME;
@@ -156,6 +164,8 @@ public class CPU extends Thread {
                 fetch();
                 if (opcode != 0xCB) {
                     state = CPUState.DECODE_AND_EXECUTE;
+
+
                 } else {
                     fetchedCb = true;
                 }
@@ -164,7 +174,17 @@ public class CPU extends Thread {
                 if (!built) {
                     if (testMode) {
                         currentOpcodeObject = opcodeBuilder.build(opcode, fetchedCb);
-                    } else currentOpcodeObject = opcodeBuilder.build(fetchedAt, opcode, fetchedCb);
+                    } else {
+                        currentOpcodeObject = opcodeBuilder.build(fetchedAt, opcode, fetchedCb);
+
+                        if(breaker){
+                            if(currentOpcodeObject != null && currentOpcodeObject.getFetchedAt() >= breakerAddress){
+                                System.out.println();
+                            }
+                        }
+
+
+                    }
 
                     fetchedCb = false;
                     built = true;
@@ -182,6 +202,7 @@ public class CPU extends Thread {
                     setPendingImeEnable(false);
                 }
 
+                //System.out.println();
                 if (currentOpcodeObject.hasOperationsRemaining()) { //If this opcode still has work to do
 
                     regBefore = new RegSnap(registers); //for debug
@@ -193,35 +214,9 @@ public class CPU extends Thread {
                         }
                         int pc = registers.getPC();
                         int aBefore = 0;
-                        //DEBUG
-//                        if (pc >= 0x00F4 && pc <= 0x00FA && currentOpcodeObject.getMicroOps().peek() instanceof AluOperation) {
-//                            aBefore = registers.getA();
-//
-//                        } else if (pc >= 0x00F4 && pc <= 0x00FA && currentOpcodeObject.getOpcodeInfo().getMnemonic().equals("JR") && registers.isFlagSet(Registers.FLAG_ZERO)) {
-//                            System.out.println();
-//                        }
-                        // // //
-
 
                         MicroOperation executed = currentOpcodeObject.execute(this, memory);
 
-                        /*
-                        // ------ Debug hook start ------
-                        // If we're inside the header-sum routine (PC in 0x00F4-0x00FA) and it's an ADD op:
-                        if (pc >= 0x00F4 && pc <= 0x00FA && executed instanceof AluOperation) {
-                            int hl = registers.getHL();
-                            int memVal = memory.readByteUnrestricted(hl);
-                            System.out.printf("Logo-sum step at PC=0x%04X: HL=0x%04X, (HL)=0x%02X, A before add=0x%02X, A after add=0x%02X\n",
-                                    pc, hl, memVal, aBefore, registers.getA());
-                            boolean z = registers.isFlagSet(Registers.FLAG_ZERO);
-                            System.out.printf(" → Z=%b\n", z);
-                            if (z) {
-                                System.out.println();
-                            }
-                        }
-                        // ------ Debug hook end ------
-                        */
-                        //cyclesThisInstr += executed.getCycles();
                         MicroOperation nextOp = currentOpcodeObject.getMicroOps().peek();
                         if (nextOp == null) {
                             done = true;
@@ -230,15 +225,22 @@ public class CPU extends Thread {
                         }
                     }
                 } else {
-                    //printDebug();
 
                     cyclesThisInstr = currentOpcodeObject.getRealCycles();
                     built = false;
                     state = CPUState.FETCH;
                     testStepComplete = true;
-                    if (registers.getPC() == 0x00F1) {
-                        printHRAM();
+                    if(currentOpcodeObject.getFetchedAt() >= 0x150){
+                        //System.out.println(currentOpcodeObject.toString());
                     }
+                    if(breaker){
+                        if(currentOpcodeObject != null && currentOpcodeObject.getFetchedAt() >= breakerAddress){
+                            System.out.println();
+                            printHRAM();
+                            ppu.printVRAM();
+                        }
+                    }
+
                 }
             }
         }

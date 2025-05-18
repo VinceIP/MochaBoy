@@ -34,7 +34,7 @@ public class BitShiftOperation implements MicroOperation {
                 result = ((v << 1) | carryIn) & 0xFF;
             }
             case RLC, RLCA -> {
-                result = (v << 1) & 0xFF;
+                result = ((v << 1) | msb) & 0xFF;
             }
             case RR, RRA -> {
                 int carryIn = cpu.getRegisters().isFlagSet(Registers.FLAG_CARRY) ? 1 : 0;

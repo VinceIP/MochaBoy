@@ -130,9 +130,6 @@ public class Registers {
     }
 
     public void setPC(int PC) {
-        if(PC >= 0x7FFF){
-            System.out.println();
-        }
         this.PC = PC;
     }
 

@@ -164,9 +164,6 @@ class LdOpcodesTest {
         cpu.getRegisters().setHL(0x2345);
         cpu.getRegisters().setByName(srcReg, 0x7F);
         memory.writeByteUnrestricted(0, opcode);
-        if(opcode == 0x74){
-            System.out.println();
-        }
         while (!cpu.isTestStepComplete()) {
             cpu.step();
         }
