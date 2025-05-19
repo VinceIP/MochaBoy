@@ -2,3 +2,4 @@
 *.gbc
 *.bin
 build/
+roms/
