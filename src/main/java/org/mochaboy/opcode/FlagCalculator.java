@@ -32,11 +32,16 @@ public class FlagCalculator {
                     conditions.isCarry = (lowSp + e8) > 0xFF;
                     break;
                 //values of any 16-bit register
-                case "AF": case "BC": case "DE": case "HL": case "SP": case "PC":
+                case "AF":
+                case "BC":
+                case "DE":
+                case "HL":
+                case "SP":
+                case "PC":
                     if (operands[0].getName().length() > 1) {       // dest is 16-bit?
                         conditions.isZero = ((xVal + yVal) & 0xFFFF) == 0;
                         conditions.isHalfCarry = (((xVal & 0x0FFF) + (yVal & 0x0FFF)) & 0x1000) != 0;
-                        conditions.isCarry     = (xVal + yVal) > 0xFFFF;
+                        conditions.isCarry = (xVal + yVal) > 0xFFFF;
                         break;
                     }
                 default:
@@ -60,16 +65,16 @@ public class FlagCalculator {
         calculators.put("DEC", (cpu, xVal, yVal, operands) -> {
             FlagConditions conditions = new FlagConditions();
             //Flags only affected under these conditions
-                conditions.isZero = ((xVal - 1) & 0xFF) == 0;
-                conditions.isHalfCarry = (xVal & 0x0F) == 0;
-                conditions.isSubtract = true;
+            conditions.isZero = ((xVal - 1) & 0xFF) == 0;
+            conditions.isHalfCarry = (xVal & 0x0F) == 0;
+            conditions.isSubtract = true;
             return conditions;
         });
 
         calculators.put("INC", (cpu, xVal, yVal, operands) -> {
             FlagConditions conditions = new FlagConditions();
-                conditions.isZero = ((xVal + 1) & 0xFF) == 0;
-                conditions.isHalfCarry = ((xVal & 0xF) + (1 & 0xF)) > 0xF;
+            conditions.isZero = ((xVal + 1) & 0xFF) == 0;
+            conditions.isHalfCarry = ((xVal & 0xF) + (1 & 0xF)) > 0xF;
             return conditions;
         });
 
@@ -210,6 +215,9 @@ public class FlagCalculator {
 
     private void registerMiscCalculators() {
         calculators.put("CPL", (cpu, xVal, yVal, operands) -> {
+            return null;
+        });
+        calculators.put("SCF", (cpu, xVal, yVal, operands) -> {
             return null;
         });
         calculators.put("DAA", (cpu, xVal, yVal, operands) -> {

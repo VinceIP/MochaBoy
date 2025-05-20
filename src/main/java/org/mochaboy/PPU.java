@@ -49,7 +49,6 @@ public class PPU {
         memory.writeByteUnrestricted(map.get("BGP"), 0xFC); //bg palette
         memory.writeByteUnrestricted(map.get("OBP0"), 0xFF); //Sprite palette 0
         memory.writeByteUnrestricted(map.get("OBP1"), 0xFF); //Sprite palette 1
-        //loadTestTiles();
     }
 
     public void step(int cycles) {
@@ -57,7 +56,9 @@ public class PPU {
         int lcdc = memory.readByteUnrestricted(memoryMap.get("LCDC"));
         lcdEnabled = isLcdEnabled();
         if (!isLcdEnabled()) {
-            memory.writeByteUnrestricted(memoryMap.get("LY"), 0x00);
+            // LCD is off – hardware forces LY=0 and STAT mode=HBlank
+            memory.writeByteUnrestricted(memoryMap.get("LY"), 0);
+            cycleCounter = 0;
             setPpuMode(PPU_MODE.HBLANK);
             return;
         }
@@ -116,24 +117,30 @@ public class PPU {
 //        System.out.println("drawScanline: BGP = 0x" + String.format("%02X", bgp));
 
         int tileMapBase = ((lcdc & 0x08) != 0) ? 0x9C00 : 0x9800;
-        int tileDataBase = ((lcdc & 0x10) != 0) ? 0x8000 : 0x9000;
+        //int tileDataBase = ((lcdc & 0x10) != 0) ? 0x8000 : 0x9000;
+        int tileDataBase = 0x8000;
+        if (tileDataBase == 0x9000) {
+            //System.out.println();
+        }
 
-        int tileRow = (scy + ly) / 8;
+        int tileRow = ((scy + ly) & 0xFF) >> 3;  // divide by 8
 
         for (int pixel = 0; pixel < 160; pixel++) {
-            int tileCol = ((scx + pixel) / 8) & 0xFFFF;
-            int tileAddress = (tileMapBase + (tileRow * 32) + tileCol) & 0xFFFF;
+            int tileCol = ((scx + pixel) & 0xFF) >> 3;
+            tileRow &= 31;
+            tileCol &= 31;
+            int tileAddress = tileMapBase + tileRow * 32 + tileCol;
             int tileNum = memory.readByteUnrestricted(tileAddress);
             if (tileDataBase == 0x9000) tileNum = (byte) tileNum; //Sign data if in 8800 method
-            int tileDataAddress = (tileDataBase + (tileNum * 16)) & 0xFFFF;
-
+            int tileDataAddress = tileDataBase + tileNum * 16;
+            tileDataAddress = 0x8000 | ((tileDataAddress - 0x8000) & 0x1FFF);
             int tileY = ((scy + ly) & 0xFF) % 8;
             int tileData1 = memory.readByteUnrestricted((tileDataAddress + (tileY * 2)) & 0xFFFF);
             int tileData2 = memory.readByteUnrestricted((tileDataAddress + (tileY * 2) + 1) & 0xFFFF);
 
             int tileX = ((scx + pixel) & 0xFF) % 8;
 
-            int colorBitLow = (tileData1 >> 7 - tileX) & 1;
+            int colorBitLow = (tileData1 >> (7 - tileX)) & 1;
             int colorBitHigh = (tileData2 >> (7 - tileX)) & 1;
 
             int colorIndex = (colorBitHigh << 1) | colorBitLow;
