@@ -277,9 +277,9 @@ public class OpcodeBuilder {
             case "BC":
             case "DE":
             case "HL":
-                if (s.isIncrement() || s.isDecrement()) checkIncDec = true;
             case "SP":
             case "PC":
+                if (s.isIncrement() || s.isDecrement()) checkIncDec = true;
                 if (opcodeObject.getSourceOperand().isImmediate()) {
                     opcodeObject.setSourceType(DataType.R16);
                     opcodeObject.addOp(

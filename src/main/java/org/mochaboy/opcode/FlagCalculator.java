@@ -238,8 +238,9 @@ public class FlagCalculator {
         calculators.put("LD", (cpu, xVal, yVal, operands) -> {
             FlagConditions conditions = new FlagConditions();
             if (operands.length > 2) {
-                int sp = xVal & 0xFFFF;
-                int offset = (byte) yVal; // sign-extend e8
+                //LD HL, SP + e8
+                int sp = yVal & 0xFFFF;
+                int offset = (byte) cpu.getCurrentOpcodeObject().getExtraValue(); // sign-extend e8
                 int sum = (sp + offset) & 0xFFFF;
                 conditions.isHalfCarry = ((sp ^ offset ^ sum) & 0x10) != 0;
                 conditions.isCarry = ((sp ^ offset ^ sum) & 0x100) != 0;

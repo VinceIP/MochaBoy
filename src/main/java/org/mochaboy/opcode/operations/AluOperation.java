@@ -52,14 +52,26 @@ public class AluOperation implements MicroOperation {
             case SUB -> result = sub(x, y);
             case POST_DEC -> {
                 Registers r = cpu.getRegisters();
-                int val = (r.getHL() - 1) & 0xFFFF;
-                r.setByName("HL", val);
+                String targetReg = "";
+                if (opcode.getSourceOperand().isIncrement() || opcode.getSourceOperand().isDecrement()) {
+                    targetReg = opcode.getSourceOperand().getName();
+                } else if (opcode.getDestinationOperand().isIncrement() || opcode.getDestinationOperand().isDecrement()) {
+                    targetReg = opcode.getDestinationOperand().getName();
+                }
+                int val = (r.getByName(targetReg) - 1) & 0xFFFF;
+                r.setByName(targetReg, val);
                 return this; //Exit early
             }
             case POST_INC -> {
                 Registers r = cpu.getRegisters();
-                int val = (r.getHL() + 1) & 0xFFFF;
-                r.setByName("HL", val);
+                String targetReg = "";
+                if (opcode.getSourceOperand().isIncrement() || opcode.getSourceOperand().isDecrement()) {
+                    targetReg = opcode.getSourceOperand().getName();
+                } else if (opcode.getDestinationOperand().isIncrement() || opcode.getDestinationOperand().isDecrement()) {
+                    targetReg = opcode.getDestinationOperand().getName();
+                }
+                int val = (r.getByName(targetReg) + 1) & 0xFFFF;
+                r.setByName(targetReg, val);
                 return this; //Exit early
             }
         }
@@ -86,13 +98,13 @@ public class AluOperation implements MicroOperation {
     }
 
     private int inc(int x, Memory memory) {
-        if(!opcode.getDestinationOperand().isImmediate()) x = pullXFromMem(memory, x);
+        if (!opcode.getDestinationOperand().isImmediate()) x = pullXFromMem(memory, x);
         x = (x + 1) & (is16BitOperation ? 0xFFFF : 0xFF);
         return x;
     }
 
     private int dec(int x, Memory memory) {
-        if(!opcode.getDestinationOperand().isImmediate()) x = pullXFromMem(memory, x);
+        if (!opcode.getDestinationOperand().isImmediate()) x = pullXFromMem(memory, x);
         x = (x - 1) & (is16BitOperation ? 0xFFFF : 0xFF);
         return x;
     }
@@ -106,7 +118,7 @@ public class AluOperation implements MicroOperation {
         return (x - y) & 0xFF;
     }
 
-    private int pullXFromMem(Memory memory, int address){
+    private int pullXFromMem(Memory memory, int address) {
         return memory.readByte(address);
     }
 

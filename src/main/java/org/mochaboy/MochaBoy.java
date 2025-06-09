@@ -14,7 +14,7 @@ public class MochaBoy {
 //            return;
 //        } else {
         //String romFile = args[0];
-        String romFile = "roms/moon/utils/bootrom_dumper.gb";
+        String romFile = "roms/03-op sp,hl.gb";
         Path path = Paths.get(romFile);
         try {
             Cartridge cartridge = new Cartridge(path);

@@ -89,10 +89,11 @@ public class CPU extends Thread {
                 tickTimers(cycles);
                 if (IME) serviceInterrupts(); //Check interrupts if enabled
 
-                if(currentOpcodeObject!= null && currentOpcodeObject.getFetchedAt() == 0x0100){
-                    printHRAM();
-                    ppu.printVRAM();
-                }
+//                if(currentOpcodeObject!= null && currentOpcodeObject.getFetchedAt() == 0x0100){
+//                    printHRAM();
+//                    ppu.printVRAM();
+//                }
+
                 ppu.step(cycles); //Run PPU for cycles this step
 
                 totalCycles += cycles;
@@ -155,6 +156,10 @@ public class CPU extends Thread {
 
 
     public int step() {
+//        if(currentOpcodeObject!= null && currentOpcodeObject.getOpcodeInfo().getOpcode() == 0xF8)
+//        {
+//            System.out.println();
+//        }
         int cyclesThisInstr = 0;
 
         switch (state) {
@@ -164,11 +169,10 @@ public class CPU extends Thread {
                 fetch();
                 if (opcode != 0xCB) {
                     state = CPUState.DECODE_AND_EXECUTE;
-
-
                 } else {
                     fetchedCb = true;
                 }
+                cyclesThisInstr++;
             }
             case DECODE_AND_EXECUTE -> {
                 if (!built) {
@@ -182,8 +186,6 @@ public class CPU extends Thread {
                                 System.out.println();
                             }
                         }
-
-
                     }
 
                     fetchedCb = false;
@@ -202,8 +204,7 @@ public class CPU extends Thread {
                     setPendingImeEnable(false);
                 }
 
-                //System.out.println();
-                if (currentOpcodeObject.hasOperationsRemaining()) { //If this opcode still has work to do
+                if (currentOpcodeObject.hasOperationsRemaining()) {//If this opcode still has work to do
 
                     regBefore = new RegSnap(registers); //for debug
 
@@ -232,6 +233,12 @@ public class CPU extends Thread {
                     testStepComplete = true;
                     if(currentOpcodeObject.getFetchedAt() >= 0x150){
                         //System.out.println(currentOpcodeObject.toString());
+                    }
+                    if(currentOpcodeObject.getOpcodeInfo().getOpcode() == 0xF8){
+                        int sp = registers.getSP();
+                        int e8 = (byte) currentOpcodeObject.getExtraValue();
+                        int res = registers.getHL();
+                        System.out.printf("SP=%04X e8=%02X HL=%04X F=%02X%n", sp, e8&0xFF, res, registers.getF());
                     }
                     if(breaker){
                         if(currentOpcodeObject != null && currentOpcodeObject.getFetchedAt() >= breakerAddress){

@@ -15,6 +15,9 @@ public class Load implements MicroOperation {
 
     @Override
     public MicroOperation execute(CPU cpu, Memory memory) {
+        if(opcode.getOpcodeInfo().getOpcode() == 0xF8){
+            System.out.println();
+        }
         Registers r = cpu.getRegisters();
         String ss = opcode.getSourceOperandString();
         String ds = opcode.getDestinationOperandString();
@@ -43,7 +46,7 @@ public class Load implements MicroOperation {
                 if (opcode.getOpcodeInfo().getOpcode() == 0xF8) {
                     //Get e8, extend it, then add to source (SP) and mask to 16 bits
                     int e8 = opcode.getExtraValue();
-                    e8 = (e8 << 24) >> 24;
+                    e8 = (byte) e8;
                     source = ((source + e8) & 0xFFFF);
                 }
                 if (Registers.isValidRegister(cpu, ds)) r.setByName(ds, source);

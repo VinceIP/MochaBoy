@@ -1,5 +1,7 @@
 package org.mochaboy;
 
+import org.mochaboy.registers.Interrupt;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Map;
@@ -59,20 +61,12 @@ public class Memory {
                 return bootRom[address] & 0xFF;
             }
 
-            if(!bootRomEnabled && address <= 0x7FFF){
+            if (!bootRomEnabled && address <= 0x7FFF) {
                 return cartridge.getCartData()[address];
             }
-            if (address == 0xFF01) {
-                return 0xFF;
-            }
-            if (address == 0xFF02) {
-                return 0x7E;
-            }
+
             return memory[address] & 0xFF;
-        }
-
-
-        else {
+        } else {
             return readByteUnrestricted(address);
         }
     }
@@ -136,31 +130,21 @@ public class Memory {
         }
 
         // ----- Minimal no-link-cable emulation: handle 0xFF01 and 0xFF02 -----
-        if (address == 0xFF01) {
+        if (address == map.get("SB")) {
             memory[address] = (byte) value;
             lastWrite = new LastWrite(address, value, cpu.getCurrentOpcodeObject().getFetchedAt());
             return;
         }
-        if (address == 0xFF02) {
-            // Tetris is writing the Serial Control register
+
+        if (address == map.get("SC")) {
             memory[address] = (byte) value;
-
-            // Check if bit 7 is set => "Start Transfer"
             if ((value & 0x80) != 0) {
-                // 1) Immediately complete the transfer:
-                //    Put 0xFF in SB => "no partner" data
+                int data = memory[map.get("SB")] & 0xFF;
+                System.out.print((char) data);
                 memory[0xFF01] = (byte) 0xFF;
-
-                // 2) Clear bit 7 in SC => transfer done
-                int newVal = value & 0x7F;
-                memory[address] = (byte) newVal;
-
-                // 3) Optionally raise the Serial interrupt (bit 3 in IF),
-                //    if Tetris relies on that to continue
-                int ifAddress = map.get("IF");
-                int ifVal = memory[ifAddress] & 0xFF;
-                ifVal |= (1 << 3); // set bit 3 => Serial interrupt
-                memory[ifAddress] = (byte) ifVal;
+                memory[address] = (byte) (value & 0x7F);
+                int ifAddr = map.get("IF");
+                cpu.getInterrupt().setInterrupt(Interrupt.INTERRUPT.SERIAL);
             }
             lastWrite = new LastWrite(address, value, cpu.getCurrentOpcodeObject().getFetchedAt());
             return;
