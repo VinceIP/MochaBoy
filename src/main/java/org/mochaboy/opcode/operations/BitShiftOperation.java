@@ -51,7 +51,11 @@ public class BitShiftOperation implements MicroOperation {
                 result = (v << 1) & 0xFF;
             }
             case SRA -> {
-                result = (v >> 1) & 0xFF;
+                int old = v & 0xFF;
+                int carry = old & 0x01;
+                result = (old >> 1 ) | (old & 0x80);
+                result &= 0xFF;
+                msb = carry;
             }
             case SRL -> {
                 msb = v & 1;

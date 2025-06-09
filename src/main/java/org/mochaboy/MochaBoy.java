@@ -14,7 +14,7 @@ public class MochaBoy {
 //            return;
 //        } else {
         //String romFile = args[0];
-        String romFile = "roms/03-op sp,hl.gb";
+        String romFile = "roms/09-op r,r.gb";
         Path path = Paths.get(romFile);
         try {
             Cartridge cartridge = new Cartridge(path);
