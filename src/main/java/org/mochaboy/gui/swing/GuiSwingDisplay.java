@@ -1,4 +1,4 @@
-package org.mochaboy.gui;
+package org.mochaboy.gui.swing;
 
 import org.mochaboy.FrameBuffer;
 

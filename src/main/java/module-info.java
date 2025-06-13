@@ -9,5 +9,7 @@ module org.mochaboy {
 
     opens   org.mochaboy to javafx.fxml, com.google.gson, org.lwjgl, org.lwjgl.glfw, org.lwjgl.opengl;
     opens org.mochaboy.opcode to com.google.gson;
+    opens org.mochaboy.gui.fx to javafx.fxml;
     exports org.mochaboy;
+    exports org.mochaboy.gui.fx to javafx.fxml;
 }

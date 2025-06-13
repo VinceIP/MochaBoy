@@ -1,4 +1,4 @@
-package org.mochaboy.gui;
+package org.mochaboy.gui.gl;
 
 import org.lwjgl.glfw.GLFWErrorCallback;
 import org.lwjgl.glfw.GLFWVidMode;

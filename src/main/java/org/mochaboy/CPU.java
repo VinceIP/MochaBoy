@@ -99,7 +99,7 @@ public class CPU extends Thread {
                     double sleepMs = FRAME_TIME_MS - frameMs;
 
                     if (sleepMs > 0) try {
-                        Thread.sleep((long) sleepMs/3);
+                        Thread.sleep((long) sleepMs);
                         //Thread.sleep(100);
                     } catch (InterruptedException ignored) {
                     }

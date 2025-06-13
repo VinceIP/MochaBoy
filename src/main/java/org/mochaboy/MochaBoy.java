@@ -2,7 +2,7 @@ package org.mochaboy;
 
 import javafx.application.Application;
 import javafx.stage.Stage;
-import org.mochaboy.gui.GuiFxEmulator;
+import org.mochaboy.gui.fx.GuiFxEmulator;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -13,7 +13,7 @@ public class MochaBoy extends Application {
     static GuiFxEmulator gui;
     public static void main(String[] args) {
 
-        String romFile = "roms/cpu_instrs.gb";
+        String romFile = "roms/tetris.gb";
 
         Path path = Paths.get(romFile);
         try {

@@ -1,5 +1,8 @@
-package org.mochaboy.gui;
+package org.mochaboy.gui.fx;
 
+import javafx.beans.binding.IntegerBinding;
+import javafx.beans.property.IntegerProperty;
+import javafx.beans.property.SimpleIntegerProperty;
 import javafx.scene.image.PixelFormat;
 import javafx.scene.image.PixelWriter;
 import javafx.scene.image.WritableImage;
@@ -9,7 +12,8 @@ public class GuiFxDisplay {
     private final FrameBuffer frameBuffer;
     private final int width = 160;
     private final int height = 144;
-    private int scale = 4;
+
+    private final IntegerProperty scale = new SimpleIntegerProperty(4);
 
     private WritableImage writableImage;
     private PixelWriter pixelWriter;
@@ -51,7 +55,7 @@ public class GuiFxDisplay {
     }
 
     public int getScale() {
-        return scale;
+        return scale.get();
     }
 
     public boolean isEnabled() {
@@ -67,13 +71,23 @@ public class GuiFxDisplay {
     }
 
     public void setScale(int scale) {
-        this.scale = scale;
+        this.scale.set(scale);
+    }
+
+    public IntegerProperty scaleProperty() {
+        return scale;
+    }
+
+    public IntegerBinding scaledWidthProperty()  {
+        return scale.multiply(width);
+    }
+    public IntegerBinding scaledHeightProperty() {
+        return scale.multiply(height);
     }
 
     public WritableImage getWritableImage() {
         return writableImage;
     }
-
 
 
     public void setFrameReady(boolean frameReady) {

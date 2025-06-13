@@ -1,11 +1,9 @@
 package org.mochaboy;
 
 import javafx.application.Platform;
-import org.mochaboy.gui.GuiFxDisplay;
-import org.mochaboy.gui.GuiSwingDisplay;
+import org.mochaboy.gui.fx.GuiFxDisplay;
 import org.mochaboy.registers.Interrupt;
 
-import javax.swing.*;
 import java.util.Map;
 
 public class PPU {
@@ -110,7 +108,7 @@ public class PPU {
         int ly = memory.readByteUnrestricted(memoryMap.get("LY"));
         int bgp = memory.readByteUnrestricted(memoryMap.get("BGP"));
 
-        if (!lcdEnabled || (lcdc & 0x01) == 0) return;
+        //if (!lcdEnabled || (lcdc & 0x01) == 0) return;
 
 //        System.out.println("drawScanline: LCDC = 0x" + String.format("%02X", lcdc));
 //        System.out.println("drawScanline: SCY = 0x" + String.format("%02X", scy));
