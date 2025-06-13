@@ -20,10 +20,10 @@ public class Timer {
     }
 
     public void incDiv() {
-        byte div = (byte) ((byte) getDiv() & 0xFF);
+        int div = getDiv() & 0xFF;
         int address = map.get("DIV");
         div++;
-        memory.getMemoryArray()[address] = div;
+        memory.writeByte(map.get("DIV"), div & 0xFF);
     }
 
     public void resetDiv() {
@@ -33,9 +33,10 @@ public class Timer {
     public void incTima() {
         int tima = getTima();
         if (tima == 0xFF) {
-            resetTima(getTma());
+            resetTima(0);
             //Request interrupt
             interrupt.setInterrupt(Interrupt.INTERRUPT.TIMER);
+            return;
         }
         memory.writeByte(map.get("TIMA"), tima + 1 & 0xFF);
     }
@@ -63,22 +64,13 @@ public class Timer {
 
     public int getTacPeriod() {
         int tac = getTac() & 0x03;
-        int tacFreq = 0;
-        switch (tac) {
-            case 0x00:
-                tacFreq = 256;
-                break;
-            case 0x01:
-                tacFreq = 4;
-                break;
-            case 0x02:
-                tacFreq = 16;
-                break;
-            case 0x03:
-                tacFreq = 64;
-                break;
-        }
-        return tacFreq;
+        return switch (tac) {
+            case 0x00 -> 256;
+            case 0x01 -> 4;
+            case 0x02 -> 16;
+            case 0x03 -> 64;
+            default -> 0;
+        };
     }
 
     public int getDiv() {

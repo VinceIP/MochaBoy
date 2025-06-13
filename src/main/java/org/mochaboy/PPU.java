@@ -108,7 +108,7 @@ public class PPU {
         int ly = memory.readByteUnrestricted(memoryMap.get("LY"));
         int bgp = memory.readByteUnrestricted(memoryMap.get("BGP"));
 
-        //if (!lcdEnabled || (lcdc & 0x01) == 0) return;
+        if (!lcdEnabled || (lcdc & 0x01) == 0) return;
 
 //        System.out.println("drawScanline: LCDC = 0x" + String.format("%02X", lcdc));
 //        System.out.println("drawScanline: SCY = 0x" + String.format("%02X", scy));
@@ -119,9 +119,6 @@ public class PPU {
         int tileMapBase = ((lcdc & 0x08) != 0) ? 0x9C00 : 0x9800;
         //int tileDataBase = ((lcdc & 0x10) != 0) ? 0x8000 : 0x9000;
         int tileDataBase = 0x8000;
-        if (tileDataBase == 0x9000) {
-            //System.out.println();
-        }
 
         int tileRow = ((scy + ly) & 0xFF) >> 3;  // divide by 8
 

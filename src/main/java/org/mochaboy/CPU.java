@@ -79,7 +79,6 @@ public class CPU extends Thread {
         running = true;
         long frameStart = System.nanoTime();
         state = CPUState.FETCH;
-        //testMode = true;
 
         while (running) {
             if (!isHalt()) {
@@ -89,11 +88,6 @@ public class CPU extends Thread {
                 tickTimers(cycles);
                 if (IME) serviceInterrupts(); //Check interrupts if enabled
 
-//                if(currentOpcodeObject!= null && currentOpcodeObject.getFetchedAt() == 0x0100){
-//                    printHRAM();
-//                    ppu.printVRAM();
-//                }
-
                 ppu.step(cycles); //Run PPU for cycles this step
 
                 totalCycles += cycles;
@@ -102,11 +96,10 @@ public class CPU extends Thread {
                 if (totalCycles >= CYCLES_PER_FRAME) {
                     long frameEnd = System.nanoTime();
                     double frameMs = (frameEnd - frameStart) / 1_000_000.0;
-                    //System.out.println("Frame ms: " + frameMs);
                     double sleepMs = FRAME_TIME_MS - frameMs;
-                    //System.out.println("Sleep ms: " + sleepMs);
+
                     if (sleepMs > 0) try {
-                        Thread.sleep((long) sleepMs);
+                        Thread.sleep((long) sleepMs/3);
                         //Thread.sleep(100);
                     } catch (InterruptedException ignored) {
                     }
@@ -231,15 +224,7 @@ public class CPU extends Thread {
                     built = false;
                     state = CPUState.FETCH;
                     testStepComplete = true;
-                    if(currentOpcodeObject.getFetchedAt() >= 0x150){
-                        //System.out.println(currentOpcodeObject.toString());
-                    }
-                    if(currentOpcodeObject.getOpcodeInfo().getOpcode() == 0xF8){
-                        int sp = registers.getSP();
-                        int e8 = (byte) currentOpcodeObject.getExtraValue();
-                        int res = registers.getHL();
-                        System.out.printf("SP=%04X e8=%02X HL=%04X F=%02X%n", sp, e8&0xFF, res, registers.getF());
-                    }
+
                     if(breaker){
                         if(currentOpcodeObject != null && currentOpcodeObject.getFetchedAt() >= breakerAddress){
                             System.out.println();

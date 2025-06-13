@@ -196,7 +196,7 @@ public class Memory {
      * Loads DMG_BOOT.bin to memory
      */
     private void loadBootRom() {
-        try (InputStream inputStream = getClass().getResourceAsStream("/dmg_boot.bin")) {
+        try (InputStream inputStream = getClass().getResourceAsStream("/system/dmg_boot.bin")) {
             if (inputStream != null) {
                 byte[] buffer = inputStream.readAllBytes();
                 System.arraycopy(buffer, 0, bootRom, 0, buffer.length);

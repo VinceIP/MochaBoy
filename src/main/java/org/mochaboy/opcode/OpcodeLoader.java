@@ -20,7 +20,7 @@ public class OpcodeLoader {
 
     private void loadOpcodes() throws IOException {
         Gson gson = new Gson();
-        InputStreamReader reader = new InputStreamReader(getClass().getResourceAsStream("/Opcodes.json"));
+        InputStreamReader reader = new InputStreamReader(getClass().getResourceAsStream("/system/Opcodes.json"));
         Type type = new TypeToken<OpcodeWrapper>() {}.getType();
         this.opcodeWrapper = gson.fromJson(reader, type);
         reader.close();
