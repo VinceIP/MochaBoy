@@ -1,5 +1,7 @@
 package org.mochaboy;
 
+import javafx.application.Platform;
+import org.mochaboy.gui.GuiFxDisplay;
 import org.mochaboy.gui.GuiSwingDisplay;
 import org.mochaboy.registers.Interrupt;
 
@@ -18,12 +20,12 @@ public class PPU {
 
     private final Memory memory;
     private final FrameBuffer frameBuffer;
-    private final GuiSwingDisplay display;
+    private final GuiFxDisplay display;
     private Interrupt interrupt;
 
     private CPU cpu;
 
-    public PPU(Memory memory, FrameBuffer frameBuffer, GuiSwingDisplay display) {
+    public PPU(Memory memory, FrameBuffer frameBuffer, GuiFxDisplay display) {
         this.memory = memory;
         this.frameBuffer = frameBuffer;
         this.display = display;
@@ -71,7 +73,7 @@ public class PPU {
             // Enter V-Blank mode at LY = 144
             if (ppuMode != PPU_MODE.VBLANK) {
                 setPpuMode(PPU_MODE.VBLANK);
-                SwingUtilities.invokeLater(display::updateFrame);
+                Platform.runLater(display::updateFrame);
             }
         } else if (cycleCounter < 80) {
             // Enter OAM Scan Mode

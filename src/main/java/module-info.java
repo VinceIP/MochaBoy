@@ -8,5 +8,6 @@ module org.mochaboy {
     requires org.lwjgl.opengl;
 
     opens   org.mochaboy to javafx.fxml, com.google.gson, org.lwjgl, org.lwjgl.glfw, org.lwjgl.opengl;
+    opens org.mochaboy.opcode to com.google.gson;
     exports org.mochaboy;
 }
