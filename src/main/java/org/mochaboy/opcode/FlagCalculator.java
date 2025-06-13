@@ -64,10 +64,8 @@ public class FlagCalculator {
 
         calculators.put("DEC", (cpu, xVal, yVal, operands) -> {
             FlagConditions conditions = new FlagConditions();
-            //Flags only affected under these conditions
             conditions.isZero = ((xVal - 1) & 0xFF) == 0;
             conditions.isHalfCarry = (xVal & 0x0F) == 0;
-            conditions.isSubtract = true;
             return conditions;
         });
 
@@ -220,10 +218,13 @@ public class FlagCalculator {
         calculators.put("SCF", (cpu, xVal, yVal, operands) -> {
             return null;
         });
+        /*
         calculators.put("DAA", (cpu, xVal, yVal, operands) -> {
             FlagConditions conditions = new FlagConditions();
+            conditions.isZero = (xVal == 0);
+            conditions.isCarry = ((xVal & 0x100) != 0);
             return conditions;
-        });
+        });*/
 
         calculators.put("POP", (cpu, xVal, yVal, operands) -> {
             FlagConditions conditions = new FlagConditions();

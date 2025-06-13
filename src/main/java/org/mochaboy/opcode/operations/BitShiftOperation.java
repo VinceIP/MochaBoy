@@ -11,6 +11,7 @@ public class BitShiftOperation implements MicroOperation {
     private final Type type;
     private final Supplier<Integer> targetValue;
     private final Opcode opcode;
+    private int v;
     private int result;
     private int msb;
 
@@ -23,7 +24,7 @@ public class BitShiftOperation implements MicroOperation {
 
     @Override
     public MicroOperation execute(CPU cpu, Memory memory) {
-        int v = targetValue != null ? targetValue.get() : 0;
+        v = targetValue != null ? targetValue.get() : 0;
         if (opcode.getOpcodeInfo().getOperands().length > 0 && opcode.getOpcodeInfo().getOperands()[0].getName().equals("HL")) {
             v = memory.readWord(v);
         }
@@ -79,6 +80,8 @@ public class BitShiftOperation implements MicroOperation {
             destRegister = opcode.getDestinationOperand().getName();
             if (!opcode.getDestinationOperand().isImmediate()) {
                 cpu.getMemory().writeByte(cpu.getRegisters().getHL(), result);
+                opcode.setDestinationValue(result);
+                opcode.setSourceValue(msb);
                 return;
             }
         }

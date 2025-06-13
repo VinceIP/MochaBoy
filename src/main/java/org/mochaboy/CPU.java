@@ -167,7 +167,7 @@ public class CPU extends Thread {
                 testStepComplete = false;
                 if (!fetchedCb) fetchedAt = registers.getPC();
                 fetch();
-                if (opcode != 0xCB) {
+                if (opcode != 0xCB || fetchedCb) {
                     state = CPUState.DECODE_AND_EXECUTE;
                 } else {
                     fetchedCb = true;

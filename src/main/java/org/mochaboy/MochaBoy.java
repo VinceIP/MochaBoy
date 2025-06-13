@@ -14,7 +14,14 @@ public class MochaBoy {
 //            return;
 //        } else {
         //String romFile = args[0];
-        String romFile = "roms/09-op r,r.gb";
+
+        //Current blaarg stats:
+        /*
+        FAIL: 2
+         */
+
+
+        String romFile = "roms/10-bit ops.gb";
         Path path = Paths.get(romFile);
         try {
             Cartridge cartridge = new Cartridge(path);

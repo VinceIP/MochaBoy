@@ -42,8 +42,11 @@ public class OpcodeBuilder {
         //Queue up a flag process op if needed
         Flags f = opcodeInfo.getFlags();
         if (!f.getC().equals("-") || !f.getH().equals("-") || !f.getN().equals("-") || !f.getZ().equals("-")) {
-            opcodeObject.addOp(new HandleFlags(flagCalculator, cpu, opcodeInfo,
-                    opcodeObject::getDestinationValue, opcodeObject::getSourceValue));
+            if (!opcodeObject.getOpcodeInfo().getMnemonic().equals("DAA")) {
+                opcodeObject.addOp(new HandleFlags(flagCalculator, cpu, opcodeInfo,
+                        opcodeObject::getDestinationValue, opcodeObject::getSourceValue));
+            }
+
         }
 
         //Determine if this is LD [HL-/+]
@@ -650,11 +653,10 @@ public class OpcodeBuilder {
 
             }
 
-            case "DAA" -> {
-
-            }
-
             //Misc instructions
+            case "DAA" -> {
+                opcodeObject.addOp(new AluOperation(AluOperation.Type.DAA, opcodeObject, opcodeObject::getDestinationValue, opcodeObject::getSourceValue));
+            }
             case "NOP" -> {
                 opcodeObject.addOp(new EmptyCycle());
             }

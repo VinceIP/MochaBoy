@@ -15,6 +15,8 @@ public class AluOperation implements MicroOperation {
     private Supplier<Integer> sourceValue;
     private final Type type;
     private int result;
+    private int x;
+    private int y;
     private boolean is16BitOperation;
     private Opcode opcode;
 
@@ -28,14 +30,14 @@ public class AluOperation implements MicroOperation {
         this.opcode = opcode;
         this.destinationValue = destinationValue;
         this.sourceValue = sourceValue;
-        is16BitOperation = (opcode.getDestinationType().equals(DataType.R16) || opcode.getDestinationType().equals(DataType.N16));
+        if (opcode.getDestinationType() != null)
+            is16BitOperation = (opcode.getDestinationType().equals(DataType.R16) || opcode.getDestinationType().equals(DataType.N16));
+        else is16BitOperation = false;
     }
 
 
     @Override
     public MicroOperation execute(CPU cpu, Memory memory) {
-        int x = 0;
-        int y = 0;
         if (destinationValue != null) x = destinationValue.get();
         if (sourceValue != null) y = sourceValue.get();
         switch (type) {
@@ -46,8 +48,16 @@ public class AluOperation implements MicroOperation {
                 opcode.setDestinationValue(x);
                 return this; //FlagCalculator handles CP
             }
-            case DEC -> result = dec(x, memory);
-            case INC -> result = inc(x, memory);
+            case DAA -> {
+                daa(cpu, opcode);
+                return this;
+            }
+            case DEC -> {
+                result = dec(x, memory,cpu);
+            }
+            case INC -> {
+                result = inc(x, memory,cpu);
+            }
             case SBC -> result = sbc(cpu, x, y);
             case SUB -> result = sub(x, y);
             case POST_DEC -> {
@@ -97,16 +107,20 @@ public class AluOperation implements MicroOperation {
         }
     }
 
-    private int inc(int x, Memory memory) {
-        if (!opcode.getDestinationOperand().isImmediate()) x = pullXFromMem(memory, x);
-        x = (x + 1) & (is16BitOperation ? 0xFFFF : 0xFF);
-        return x;
+    private int dec(int x, Memory memory, CPU cpu) {
+        if (!opcode.getDestinationOperand().isImmediate()) {
+            x = memory.readByte(cpu.getRegisters().getHL());
+            opcode.setDestinationValue(x);
+        }
+        return (x - 1) & (is16BitOperation ? 0xFFFF : 0xFF);
     }
 
-    private int dec(int x, Memory memory) {
-        if (!opcode.getDestinationOperand().isImmediate()) x = pullXFromMem(memory, x);
-        x = (x - 1) & (is16BitOperation ? 0xFFFF : 0xFF);
-        return x;
+    private int inc(int x, Memory memory, CPU cpu) {
+        if (!opcode.getDestinationOperand().isImmediate()) {
+            x = memory.readByte(cpu.getRegisters().getHL());
+            opcode.setDestinationValue(x);
+        }
+        return (x + 1) & (is16BitOperation ? 0xFFFF : 0xFF);
     }
 
     private int sbc(CPU cpu, int x, int y) {
@@ -117,6 +131,32 @@ public class AluOperation implements MicroOperation {
     private int sub(int x, int y) {
         return (x - y) & 0xFF;
     }
+
+    private void daa(CPU cpu, Opcode opcode) {
+        Registers r = cpu.getRegisters();
+        int a = r.getA();
+        boolean n = r.isFlagSet(Registers.FLAG_SUBTRACT);
+        boolean h = r.isFlagSet(Registers.FLAG_HALF_CARRY);
+        boolean c = r.isFlagSet(Registers.FLAG_CARRY);
+        int result = a;
+
+        if (!n) {
+            if (h || (result & 0xF) > 9) result += 0x06;
+            if (c || (result > 0x9F)) result += 0x60;
+        } else {
+            if (h) result = (result - 6) & 0xFF;
+            if (c) result -= 0x60;
+        }
+
+        r.clearFlag(Registers.FLAG_HALF_CARRY);
+        if ((result & 0x100) != 0) r.setFlag(Registers.FLAG_CARRY);
+
+        result &= 0xFF;
+        if (result == 0) r.setFlag(Registers.FLAG_ZERO);
+        else r.clearFlag(Registers.FLAG_ZERO);
+        r.setA(result);
+    }
+
 
     private int pullXFromMem(Memory memory, int address) {
         return memory.readByte(address);
@@ -137,7 +177,7 @@ public class AluOperation implements MicroOperation {
         String destinationRegister = opcode.getDestinationOperandString();
         if (dt == DataType.N16) {
             //Writes result to memory for INC [HL], DEC [HL]
-            int addr = opcode.getDestinationValue();
+            int addr = cpu.getRegisters().getHL();
             cpu.getMemory().writeByte(addr, result & 0xFF);
         } else {
             if (Registers.isValidRegister(cpu, destinationRegister)) {
@@ -155,6 +195,7 @@ public class AluOperation implements MicroOperation {
         SBC,
         SUB,
         POST_INC,
-        POST_DEC
+        POST_DEC,
+        DAA
     }
 }
