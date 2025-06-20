@@ -45,7 +45,7 @@ public class PPU {
         lcdEnabled = false;
         Map<String, Integer> map = memory.getMemoryMap();
         memory.writeByteUnrestricted(map.get("LY"), 0x00);
-        memory.writeByteUnrestricted(map.get("LCDC"), 0x0); //screen on, bg on
+        memory.writeByteUnrestricted(map.get("LCDC"), 0x0);
         memory.writeByteUnrestricted(map.get("BGP"), 0xFC); //bg palette
         memory.writeByteUnrestricted(map.get("OBP0"), 0xFF); //Sprite palette 0
         memory.writeByteUnrestricted(map.get("OBP1"), 0xFF); //Sprite palette 1

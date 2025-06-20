@@ -10,7 +10,6 @@ public class Interrupt {
 
     private CPU cpu;
     private Memory memory;
-    private int cylces;
 
     private final Map<String, Integer> map;
     private final Map<String, Integer> interruptMap;

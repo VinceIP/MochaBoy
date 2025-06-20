@@ -24,9 +24,16 @@ val os = when {
     else -> error("Unsupported OS")
 }
 
+
 dependencies {
-    testImplementation(platform("org.junit:junit-bom:5.10.0"))
-    testImplementation("org.junit.jupiter:junit-jupiter")
+    testImplementation(platform("org.junit:junit-bom:5.10.2"))
+    testImplementation("org.junit.jupiter:junit-jupiter-api")
+    testImplementation("org.junit.jupiter:junit-jupiter-params")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
+
+    compileOnly("org.junit.jupiter:junit-jupiter-api")
+    compileOnly("org.junit.jupiter:junit-jupiter-params")
+
     implementation("org.lwjgl:lwjgl:3.3.2")
     implementation("org.lwjgl:lwjgl-opengl:3.3.2")
     implementation("org.lwjgl:lwjgl-glfw:3.3.2")

@@ -59,7 +59,7 @@ public class Timer {
 
 
     public boolean isTacEnabled() {
-        return (getTac() >> 2) != 0;
+        return (getTac() & 0x4) != 0;
     }
 
     public int getTacPeriod() {
