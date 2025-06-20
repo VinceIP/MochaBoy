@@ -9,27 +9,25 @@ import javafx.scene.image.WritableImage;
 import org.mochaboy.FrameBuffer;
 
 public class GuiFxDisplay {
-    private final FrameBuffer frameBuffer;
     private final int width = 160;
     private final int height = 144;
-
     private final IntegerProperty scale = new SimpleIntegerProperty(4);
 
+    private FrameBuffer frameBuffer;
     private WritableImage writableImage;
     private PixelWriter pixelWriter;
     private int[] frame;
     private boolean enabled;
     private boolean frameReady;
 
-    public GuiFxDisplay(FrameBuffer frameBuffer) {
-        this.frameBuffer = frameBuffer;
-        frame = frameBuffer.getPixels();
+    public GuiFxDisplay() {
         init();
     }
 
     private void init() {
         writableImage = new WritableImage(width, height);
         pixelWriter = writableImage.getPixelWriter();
+        frameBuffer = new FrameBuffer(160, 144);
         enabled = true;
         frameReady = false;
     }
@@ -78,15 +76,20 @@ public class GuiFxDisplay {
         return scale;
     }
 
-    public IntegerBinding scaledWidthProperty()  {
+    public IntegerBinding scaledWidthProperty() {
         return scale.multiply(width);
     }
+
     public IntegerBinding scaledHeightProperty() {
         return scale.multiply(height);
     }
 
     public WritableImage getWritableImage() {
         return writableImage;
+    }
+
+    public FrameBuffer getFrameBuffer() {
+        return frameBuffer;
     }
 
 

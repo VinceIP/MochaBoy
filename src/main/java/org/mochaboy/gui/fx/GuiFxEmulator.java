@@ -10,14 +10,12 @@ import javafx.stage.Stage;
 import org.mochaboy.FrameBuffer;
 
 public class GuiFxEmulator extends Application {
-    private final FrameBuffer frameBuffer;
     private final GuiFxDisplay display;
     private int width;
     private int height;
 
-    public GuiFxEmulator(FrameBuffer frameBuffer) {
-        this.frameBuffer = frameBuffer;
-        display = new GuiFxDisplay(frameBuffer);
+    public GuiFxEmulator() {
+        display = new GuiFxDisplay();
         init();
     }
 
@@ -38,18 +36,12 @@ public class GuiFxEmulator extends Application {
         Scene scene = new Scene(rootPane);
         stage.setScene(scene);
 
-
         stage.setResizable(false);
+        stage.setWidth((display.getWidth()) * display.getScale());
+        stage.setHeight((display.getHeight() * display.getScale()));
         stage.show();
     }
 
-    public void run() {
-        Platform.runLater(display::updateFrame);
-    }
-
-    public FrameBuffer getFrameBuffer() {
-        return frameBuffer;
-    }
 
     public GuiFxDisplay getDisplay() {
         return display;

@@ -1,7 +1,5 @@
 package org.mochaboy.gui.fx;
 
-import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.MenuBar;
@@ -10,6 +8,7 @@ import javafx.scene.image.ImageView;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.FileChooser;
 import javafx.stage.Window;
+import org.mochaboy.MochaBoy;
 
 import java.io.File;
 
@@ -27,20 +26,6 @@ public class GuiFxController {
         lcdView.setImage(display.getWritableImage());
         lcdView.setPreserveRatio(true);
         lcdView.setSmooth(false);
-        lcdView.fitWidthProperty().bind(display.scaledWidthProperty());
-        lcdView.fitHeightProperty().bind(display.scaledHeightProperty());
-
-        DoubleProperty lcdW = lcdView.fitWidthProperty();
-        DoubleProperty lcdH = lcdView.fitHeightProperty();
-        ReadOnlyDoubleProperty menuH = menuBar.heightProperty();
-
-        rootPane.prefWidthProperty().bind(lcdW);
-        rootPane.minWidthProperty().bind(lcdW);
-        rootPane.maxWidthProperty().bind(lcdW);
-
-        rootPane.prefHeightProperty().bind(lcdH.add(menuH));
-        rootPane.minHeightProperty().bind(lcdH.add(menuH));
-        rootPane.maxHeightProperty().bind(lcdH.add(menuH));
 
     }
 
@@ -58,11 +43,13 @@ public class GuiFxController {
         File rom = chooser.showOpenDialog(owner);
         if (rom == null) {
             return;
+        } else {
+            MochaBoy.setupEmulator(rom.getPath());
         }
     }
 
     @FXML
     public void onExit() {
-        System.exit(1);
+        System.exit(0);
     }
 }

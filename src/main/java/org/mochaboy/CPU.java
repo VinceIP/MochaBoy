@@ -243,6 +243,9 @@ public class CPU extends Thread {
         new ReadImmediate8bit(this::setOpcode).execute(this, memory);
     }
 
+    public void kill(){
+        running = false;
+    }
     private void printDebug() {
         //System.out.println(currentOpcodeObject.toString(true));
         RegSnap after = new RegSnap(registers);
