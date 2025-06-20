@@ -21,6 +21,12 @@ public class InterruptOperation implements MicroOperation {
             case EI -> {
                 cpu.setPendingImeEnable(true);
             }
+
+            case HALT -> {
+                if (cpu.isIME()) {
+                    cpu.setHalt(true);
+                }
+            }
         }
         return this;
     }

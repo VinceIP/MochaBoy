@@ -82,7 +82,6 @@ public class CPU extends Thread {
 
         while (running) {
             if (!isHalt()) {
-
                 int cycles = halt ? 0 : step(); //Step if not in HALT
 
                 tickTimers(cycles);
@@ -112,11 +111,14 @@ public class CPU extends Thread {
 
     private void tickTimers(int cycles) {
         //DIV - 256 cycles per increment
+        //DIV - 256 cycles per increment
         divCycleAcc += cycles;
         while (divCycleAcc >= 256) {
             timer.incDiv();
             divCycleAcc -= 256;
         }
+
+        timer.update(cycles); // handle pending TIMA reloads
 
         //TIMA
         if (timer.isTacEnabled()) {
@@ -228,9 +230,10 @@ public class CPU extends Thread {
         new ReadImmediate8bit(this::setOpcode).execute(this, memory);
     }
 
-    public void kill(){
+    public void kill() {
         running = false;
     }
+
     private void printDebug() {
         //System.out.println(currentOpcodeObject.toString(true));
         RegSnap after = new RegSnap(registers);

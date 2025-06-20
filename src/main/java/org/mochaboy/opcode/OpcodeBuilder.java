@@ -650,7 +650,9 @@ public class OpcodeBuilder {
                         new InterruptOperation(InterruptOperation.Type.EI, cpu));
             }
             case "HALT" -> {
-
+                opcodeObject.addOp(
+                        new InterruptOperation(InterruptOperation.Type.HALT, cpu)
+                );
             }
 
             //Misc instructions

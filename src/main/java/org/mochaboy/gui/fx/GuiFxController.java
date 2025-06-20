@@ -34,9 +34,10 @@ public class GuiFxController {
         Window owner = ((MenuItem) evt.getSource()).getParentPopup().getOwnerWindow();
         FileChooser chooser = new FileChooser();
         chooser.setTitle("Select a Game Boy ROM");
-        chooser.setInitialDirectory(
-                new File(System.getProperty("user.home"))
-        );
+//        chooser.setInitialDirectory(
+//                new File(System.getProperty("user.home"))
+//        );
+        chooser.setInitialDirectory(new File("C:\\Users\\vin\\JavaProjects\\MochaBoy\\roms"));
         chooser.getExtensionFilters().addAll(
                 new FileChooser.ExtensionFilter("Game Boy / Game Boy Color *.gb, *.gbc", "*.gb", "*.gbc")
         );

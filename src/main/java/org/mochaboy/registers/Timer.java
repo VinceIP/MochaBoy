@@ -11,6 +11,7 @@ public class Timer {
     private final Memory memory;
     private final Interrupt interrupt;
     private final Map<String, Integer> map;
+    private int overflowDelay = 0;
 
     public Timer(Memory memory, Interrupt interrupt) {
         this.memory = memory;
@@ -33,12 +34,11 @@ public class Timer {
     public void incTima() {
         int tima = getTima();
         if (tima == 0xFF) {
-            resetTima(getTma());
-            //Request interrupt
-            interrupt.setInterrupt(Interrupt.INTERRUPT.TIMER);
-            return;
+            resetTima(0x00);
+            overflowDelay = 1;
+        } else {
+            memory.writeByte(map.get("TIMA"), (tima + 1) & 0xFF);
         }
-        memory.writeByte(map.get("TIMA"), tima + 1 & 0xFF);
     }
 
     public int getTima() {
@@ -71,6 +71,17 @@ public class Timer {
             case 0x03 -> 256;
             default -> 0;
         };
+    }
+
+    public void update(int cycles) {
+        if (overflowDelay > 0) {
+            overflowDelay -= cycles;
+            if (overflowDelay <= 0) {
+                resetTima(getTma());
+                interrupt.setInterrupt(Interrupt.INTERRUPT.TIMER);
+                overflowDelay = 0;
+            }
+        }
     }
 
     public int getDiv() {
