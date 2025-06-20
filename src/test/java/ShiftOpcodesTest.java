@@ -161,7 +161,8 @@ class ShiftOpcodesTest {
         cpu.getRegisters().setByName("B", 0x01);
         while (!cpu.isTestStepComplete()) cpu.step();
         assertEquals(0x00, cpu.getRegisters().getByName("B"));
-        assertFalse(cpu.getRegisters().isFlagSet(Registers.FLAG_CARRY));
+        assertTrue(cpu.getRegisters().isFlagSet(Registers.FLAG_CARRY));
+        assertTrue(cpu.getRegisters().isFlagSet(Registers.FLAG_ZERO));
     }
 
     // SRL r8

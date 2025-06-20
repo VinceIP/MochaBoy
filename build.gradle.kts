@@ -19,8 +19,8 @@ repositories {
 val javafxVersion = "24.0.1"
 val os = when {
     org.gradle.internal.os.OperatingSystem.current().isWindows -> "win"
-    org.gradle.internal.os.OperatingSystem.current().isLinux   -> "linux"
-    org.gradle.internal.os.OperatingSystem.current().isMacOsX  -> "mac"
+    org.gradle.internal.os.OperatingSystem.current().isLinux -> "linux"
+    org.gradle.internal.os.OperatingSystem.current().isMacOsX -> "mac"
     else -> error("Unsupported OS")
 }
 
@@ -31,6 +31,7 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter-params")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
 
+    compileOnly(platform("org.junit:junit-bom:5.10.2"))
     compileOnly("org.junit.jupiter:junit-jupiter-api")
     compileOnly("org.junit.jupiter:junit-jupiter-params")
 
@@ -41,7 +42,7 @@ dependencies {
     runtimeOnly("org.lwjgl:lwjgl-opengl:3.3.2:natives-windows")
     runtimeOnly("org.lwjgl:lwjgl-glfw:3.3.2:natives-windows")
 
-    implementation ("com.google.code.gson:gson:2.11.0")
+    implementation("com.google.code.gson:gson:2.11.0")
 
     implementation("org.openjfx:javafx-base:$javafxVersion")
     implementation("org.openjfx:javafx-graphics:$javafxVersion")
@@ -56,7 +57,6 @@ dependencies {
 java {
     toolchain.languageVersion.set(JavaLanguageVersion.of(22))
 }
-
 application {
     mainModule.set("org.mochaboy")
     mainClass.set("org.mochaboy.MochaBoy")
@@ -64,4 +64,13 @@ application {
 
 tasks.test {
     useJUnitPlatform()
+    extensions.configure(org.javamodularity.moduleplugin.extensions.TestModuleOptions::class) {
+        runOnClasspath = true
+    }
+}
+
+tasks.compileTestJava {
+    extensions.configure(org.javamodularity.moduleplugin.extensions.CompileTestModuleOptions::class) {
+        setCompileOnClasspath(true)
+    }
 }

@@ -10,7 +10,8 @@ import org.mochaboy.registers.Registers;
 import java.io.IOException;
 import java.util.stream.Stream;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 class StackOpcodesTest {
@@ -45,15 +46,16 @@ class StackOpcodesTest {
     void testAddSpE8() {
         cpu.getRegisters().setSP(0xFFF0);
         memory.writeByteUnrestricted(0, 0xE8);
-        memory.writeByteUnrestricted(1, (byte)0x10);
+        memory.writeByteUnrestricted(1, (byte) 0x10);
         while (!cpu.isTestStepComplete()) cpu.step();
         assertEquals(0x0000, cpu.getRegisters().getSP());
     }
 
+
     @Test
     void testDecSp() {
         cpu.getRegisters().setSP(0x0001);
-        memory.writeByteUnrestricted(0, 0x3C); // DEC SP opcode 0x3C? Actually DEC SP is 0x3B
+        // DEC SP
         memory.writeByteUnrestricted(0, 0x3B);
         while (!cpu.isTestStepComplete()) cpu.step();
         assertEquals(0x0000, cpu.getRegisters().getSP());
@@ -81,7 +83,7 @@ class StackOpcodesTest {
         cpu.getRegisters().setSP(0xAA55);
         memory.writeByteUnrestricted(0, 0x08);
         memory.writeByteUnrestricted(1, 0x00);
-        memory.writeByteUnrestricted(2, (byte)0xFF);
+        memory.writeByteUnrestricted(2, (byte) 0xFF);
         while (!cpu.isTestStepComplete()) cpu.step();
         assertEquals(0x55, memory.readByteUnrestricted(0xFF00));
         assertEquals(0xAA, memory.readByteUnrestricted(0xFF01));
@@ -91,7 +93,7 @@ class StackOpcodesTest {
     void testLdHlSpPlusE8() {
         cpu.getRegisters().setSP(0x1000);
         memory.writeByteUnrestricted(0, 0xF8);
-        memory.writeByteUnrestricted(1, (byte)0x10);
+        memory.writeByteUnrestricted(1, (byte) 0x10);
         while (!cpu.isTestStepComplete()) cpu.step();
         assertEquals(0x1010, cpu.getRegisters().getHL());
     }
@@ -123,7 +125,7 @@ class StackOpcodesTest {
                 arguments("POP BC", 0xC1, 0x56, 0x78, "BC", 0x5678),
                 arguments("POP DE", 0xD1, 0x56, 0x78, "DE", 0x5678),
                 arguments("POP HL", 0xE1, 0x56, 0x78, "HL", 0x5678),
-                arguments("POP AF", 0xF1, 0x56, 0x78, "AF", 0x5670) // ← mask low nibble
+                arguments("POP AF", 0xF1, 0x56, 0x78, "AF", 0x5670)
         );
     }
 
@@ -164,7 +166,7 @@ class StackOpcodesTest {
         while (!cpu.isTestStepComplete()) cpu.step();
         int sp = cpu.getRegisters().getSP();
         int lo = memory.readByteUnrestricted(sp);
-        int hi = memory.readByteUnrestricted(sp+1);
-        assertEquals(val, (hi<<8)|lo);
+        int hi = memory.readByteUnrestricted(sp + 1);
+        assertEquals(val, (hi << 8) | lo);
     }
 }
