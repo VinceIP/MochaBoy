@@ -165,6 +165,8 @@ class ShiftOpcodesTest {
         assertTrue(cpu.getRegisters().isFlagSet(Registers.FLAG_CARRY));
         // Result is zero so Z flag should be set
         assertTrue(cpu.getRegisters().isFlagSet(Registers.FLAG_ZERO));
+        assertTrue(cpu.getRegisters().isFlagSet(Registers.FLAG_CARRY));
+        assertTrue(cpu.getRegisters().isFlagSet(Registers.FLAG_ZERO));
     }
 
     // SRL r8

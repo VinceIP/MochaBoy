@@ -33,7 +33,7 @@ public class Timer {
     public void incTima() {
         int tima = getTima();
         if (tima == 0xFF) {
-            resetTima(0);
+            resetTima(getTma());
             //Request interrupt
             interrupt.setInterrupt(Interrupt.INTERRUPT.TIMER);
             return;
