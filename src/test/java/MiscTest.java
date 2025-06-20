@@ -4,6 +4,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mochaboy.CPU;
 import org.mochaboy.Memory;
+import org.mochaboy.registers.Registers;
 
 import java.io.IOException;
 import java.util.stream.Stream;
@@ -38,20 +39,18 @@ public class MiscTest {
     void testIncDec(String name, int opcode, String srcReg,
                     int address, int value, int expected,
                     boolean expectedZ, boolean expectedN, boolean expectedH, boolean expectedC) {
-        cpu.getRegisters().setByName(srcReg, value);
-        System.out.printf("%04X: %04X\n", address, memory.readByte(address));
-        System.out.printf("%04X: %04X\n", address+1, memory.readByte(address+1));
-        memory.writeByte(cpu.getRegisters().getByName(srcReg), value);
-        memory.writeByte(cpu.getRegisters().getPC(), opcode);
+        cpu.getRegisters().setByName(srcReg, address);
+        memory.writeByteUnrestricted(address, value);
+        memory.writeByteUnrestricted(0, opcode);
 
         while (!cpu.isTestStepComplete()) cpu.step();
 
-        int result = memory.readByte(cpu.getRegisters().getByName(srcReg));
+        int result = memory.readByteUnrestricted(address);
 
         assertEquals(expected, result);
-        System.out.printf("%04X: %04X\n", address, memory.readByte(address));
-        System.out.printf("%04X: %04X\n", address+1, memory.readByte(address+1));
-
-
+        assertEquals(expectedZ, cpu.getRegisters().isFlagSet(Registers.FLAG_ZERO));
+        assertEquals(expectedN, cpu.getRegisters().isFlagSet(Registers.FLAG_SUBTRACT));
+        assertEquals(expectedH, cpu.getRegisters().isFlagSet(Registers.FLAG_HALF_CARRY));
+        assertEquals(expectedC, cpu.getRegisters().isFlagSet(Registers.FLAG_CARRY));
     }
 }

@@ -161,7 +161,10 @@ class ShiftOpcodesTest {
         cpu.getRegisters().setByName("B", 0x01);
         while (!cpu.isTestStepComplete()) cpu.step();
         assertEquals(0x00, cpu.getRegisters().getByName("B"));
-        assertFalse(cpu.getRegisters().isFlagSet(Registers.FLAG_CARRY));
+        // Bit0 should be moved into the carry flag
+        assertTrue(cpu.getRegisters().isFlagSet(Registers.FLAG_CARRY));
+        // Result is zero so Z flag should be set
+        assertTrue(cpu.getRegisters().isFlagSet(Registers.FLAG_ZERO));
     }
 
     // SRL r8

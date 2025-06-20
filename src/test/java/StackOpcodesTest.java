@@ -53,7 +53,7 @@ class StackOpcodesTest {
     @Test
     void testDecSp() {
         cpu.getRegisters().setSP(0x0001);
-        memory.writeByteUnrestricted(0, 0x3C); // DEC SP opcode 0x3C? Actually DEC SP is 0x3B
+        // DEC SP
         memory.writeByteUnrestricted(0, 0x3B);
         while (!cpu.isTestStepComplete()) cpu.step();
         assertEquals(0x0000, cpu.getRegisters().getSP());
