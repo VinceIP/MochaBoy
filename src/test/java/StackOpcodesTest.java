@@ -153,7 +153,7 @@ class StackOpcodesTest {
                 arguments("PUSH BC", 0xC5, 0x1234),
                 arguments("PUSH DE", 0xD5, 0x3344),
                 arguments("PUSH HL", 0xE5, 0x5566),
-                arguments("PUSH AF", 0xF5, 0x7788)
+                arguments("PUSH AF", 0xF5, 0x7780)
         );
     }
 

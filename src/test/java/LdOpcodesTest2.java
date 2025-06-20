@@ -78,13 +78,14 @@ class LdOpcodesTest2 {
     void testRegisterPairToMemory(String name, int opcode) {
         // set base addresses for BC and DE
         cpu.getRegisters().setBC(0x1000);
-        cpu.getRegisters().setDE(0x2000);
+        cpu.getRegisters().setDE(0x2001);
         cpu.getRegisters().setByName("A", 0xAB);
         memory.writeByteUnrestricted(0, opcode);
         while (!cpu.isTestStepComplete()) {
             cpu.step();
         }
-        int addr = (opcode == 0x02 ? 0x1000 : 0x2000);
+        int addr = (opcode == 0x02 ? 0x1000 : 0x2001);
+        int result = memory.readByteUnrestricted(addr);
         assertEquals(0xAB, memory.readByteUnrestricted(addr), name + " should store A into memory[r16]");
     }
 

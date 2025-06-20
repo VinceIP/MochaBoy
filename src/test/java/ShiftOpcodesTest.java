@@ -58,7 +58,7 @@ class ShiftOpcodesTest {
     void testRlMemory() {
         memory.writeByteUnrestricted(0, 0xCB);
         memory.writeByteUnrestricted(1, 0x16);
-        int addr = 0x2000;
+        int addr = 0x2001;
         cpu.getRegisters().setHL(addr);
         memory.writeByteUnrestricted(addr, 0x01);
         cpu.getRegisters().clearFlag(Registers.FLAG_CARRY);

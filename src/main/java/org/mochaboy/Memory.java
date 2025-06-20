@@ -94,13 +94,13 @@ public class Memory {
             vramBlocked = false;
         }
 
-        //If MBC = 0?
-        if (address == 0x2000) {
+        if (cpu.isTestMode()) {
+            writeByteUnrestricted(address, value);
             return;
         }
 
-        if (cpu.isTestMode()) {
-            writeByteUnrestricted(address, value);
+        //If MBC = 0?
+        if (address == 0x2000) {
             return;
         }
 
@@ -121,7 +121,7 @@ public class Memory {
 
         if (address == 0xFF50) {
             bootRomEnabled = false;
-            System.out.println("Boot rom disabled.");
+            //System.out.println("Boot rom disabled.");
             return;
         }
         // Reset DIV if writing to DIV register

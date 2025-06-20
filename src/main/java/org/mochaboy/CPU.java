@@ -173,12 +173,6 @@ public class CPU extends Thread {
                         currentOpcodeObject = opcodeBuilder.build(opcode, fetchedCb);
                     } else {
                         currentOpcodeObject = opcodeBuilder.build(fetchedAt, opcode, fetchedCb);
-
-                        if(breaker){
-                            if(currentOpcodeObject != null && currentOpcodeObject.getFetchedAt() >= breakerAddress){
-                                System.out.println();
-                            }
-                        }
                     }
 
                     fetchedCb = false;
@@ -224,15 +218,6 @@ public class CPU extends Thread {
                     built = false;
                     state = CPUState.FETCH;
                     testStepComplete = true;
-
-                    if(breaker){
-                        if(currentOpcodeObject != null && currentOpcodeObject.getFetchedAt() >= breakerAddress){
-                            System.out.println();
-                            printHRAM();
-                            ppu.printVRAM();
-                        }
-                    }
-
                 }
             }
         }
