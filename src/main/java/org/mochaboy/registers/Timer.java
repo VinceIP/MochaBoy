@@ -65,10 +65,10 @@ public class Timer {
     public int getTacPeriod() {
         int tac = getTac() & 0x03;
         return switch (tac) {
-            case 0x00 -> 256;
-            case 0x01 -> 4;
-            case 0x02 -> 16;
-            case 0x03 -> 64;
+            case 0x00 -> 1024;
+            case 0x01 -> 16;
+            case 0x02 -> 64;
+            case 0x03 -> 256;
             default -> 0;
         };
     }
