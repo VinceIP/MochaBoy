@@ -8,7 +8,8 @@ group = "org.mochaboy"
 version = "1.0-SNAPSHOT"
 
 javafx {
-    version = "24.0.1"
+    // Use JavaFX built for JDK 21 so the tests can run on the CI JDK
+    version = "21.0.2"
     modules = listOf("javafx.controls", "javafx.fxml")
 }
 
@@ -16,7 +17,8 @@ repositories {
     mavenCentral()
 }
 
-val javafxVersion = "24.0.1"
+// JavaFX 24 requires JDK 22. Use the latest JavaFX 21 build so tests run on JDK 21.
+val javafxVersion = "21.0.2"
 val os = when {
     org.gradle.internal.os.OperatingSystem.current().isWindows -> "win"
     org.gradle.internal.os.OperatingSystem.current().isLinux -> "linux"
@@ -29,8 +31,12 @@ dependencies {
     testImplementation(platform("org.junit:junit-bom:5.10.2"))
     testImplementation("org.junit.jupiter:junit-jupiter-api")
     testImplementation("org.junit.jupiter:junit-jupiter-params")
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
+    testImplementation("org.junit.jupiter:junit-jupiter-engine")
 
+    // allow compiling against junit modules when building the main module
+    compileOnly("org.junit.jupiter:junit-jupiter-api:5.10.2")
+    compileOnly("org.junit.jupiter:junit-jupiter-params:5.10.2")
+    compileOnly("org.junit.jupiter:junit-jupiter-engine:5.10.2")
     compileOnly(platform("org.junit:junit-bom:5.10.2"))
     compileOnly("org.junit.jupiter:junit-jupiter-api")
     compileOnly("org.junit.jupiter:junit-jupiter-params")
@@ -55,7 +61,7 @@ dependencies {
 }
 
 java {
-    toolchain.languageVersion.set(JavaLanguageVersion.of(22))
+    toolchain.languageVersion.set(JavaLanguageVersion.of(21))
 }
 application {
     mainModule.set("org.mochaboy")
@@ -64,6 +70,12 @@ application {
 
 tasks.test {
     useJUnitPlatform()
+    // Running tests on the module-path requires opening our modules
+    jvmArgs(
+        "--add-opens", "org.mochaboy/org.mochaboy=ALL-UNNAMED",
+        "--add-opens", "org.mochaboy/org.mochaboy.opcode=ALL-UNNAMED",
+        "--add-opens", "org.mochaboy/org.mochaboy.gui.fx=ALL-UNNAMED"
+    )
     extensions.configure(org.javamodularity.moduleplugin.extensions.TestModuleOptions::class) {
         runOnClasspath = true
     }
