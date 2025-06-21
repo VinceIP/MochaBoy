@@ -566,15 +566,16 @@ public class OpcodeBuilder {
                 );
                 opcodeObject.setDestinationOperandString("PC");
 
-                opcodeObject.addOp(
-                        new StackOperation(StackOperation.Type.POP, opcodeObject, opcodeObject::getSourceValue)
-                );
-
                 if (opcodeObject.getOpcodeInfo().getMnemonic().equals("RETI")) {
                     opcodeObject.addOp(
                             new InterruptOperation(InterruptOperation.Type.EI_QUICK, cpu)
                     );
                 }
+
+                opcodeObject.addOp(
+                        new StackOperation(StackOperation.Type.POP, opcodeObject, opcodeObject::getSourceValue)
+                );
+
 
             }
 

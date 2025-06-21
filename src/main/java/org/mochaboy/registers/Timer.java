@@ -31,13 +31,14 @@ public class Timer {
         memory.writeByteUnrestricted(map.get("DIV"), 0x00);
     }
 
-    public void incTima() {
+    public boolean incTima() {
         int tima = getTima();
         if (tima == 0xFF) {
-            resetTima(0x00);
-            overflowDelay = 1;
+            resetTima(getTma());
+            return true;
         } else {
             memory.writeByteUnrestricted(map.get("TIMA"), (tima + 1) & 0xFF);
+            return false;
         }
     }
 

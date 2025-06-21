@@ -25,9 +25,7 @@ public class InterruptOperation implements MicroOperation {
             case EI_QUICK -> cpu.setIME(true);
 
             case HALT -> {
-                if (cpu.isIME()) {
                     cpu.setHalt(true);
-                }
             }
         }
         return this;

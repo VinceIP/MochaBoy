@@ -9,7 +9,6 @@ import org.mochaboy.registers.Timer;
 
 import java.io.IOException;
 import java.util.Map;
-import java.util.SortedMap;
 
 public class CPU extends Thread {
     private PPU ppu;
@@ -57,6 +56,9 @@ public class CPU extends Thread {
     private boolean breaker = false;
     private int breakerAddress = 0x27A3;
 
+    private int FF;
+    private int FFold;
+
     public CPU(PPU ppu, Memory memory) throws IOException {
         this.ppu = ppu;
         this.memory = memory;
@@ -69,7 +71,6 @@ public class CPU extends Thread {
         input = new Input(memory);
         opcodeLoader = new OpcodeLoader();
         opcodeWrapper = opcodeLoader.getOpcodeWrapper();
-        //opcodeHandler = new OpcodeHandler(opcodeWrapper);
         opcodeBuilder = new OpcodeBuilder(this, opcodeWrapper);
         map = memory.getMemoryMap();
     }
@@ -82,41 +83,39 @@ public class CPU extends Thread {
         state = CPUState.FETCH;
 
         while (running) {
-            if (!isHalt()) {
-                int cycles = halt ? 0 : step(); //Step if not in HALT
+            int cycles = halt ? 0 : step(); //Step if not in HALT
 
-                tickTimers(cycles);
-                if (IME) serviceInterrupts(); //Check interrupts if enabled
+            tickTimers(cycles);
+            if (IME) serviceInterrupts(); //Check interrupts if enabled
 
-                ppu.step(cycles); //Run PPU for cycles this step
+            ppu.step(cycles); //Run PPU for cycles this step
 
-                totalCycles += cycles;
-                elapsedNs += (long) (cycles * NS_PER_CYCLE);
+            totalCycles += cycles;
+            elapsedNs += (long) (cycles * NS_PER_CYCLE);
 
-                if (totalCycles >= CYCLES_PER_FRAME) {
-                    long frameEnd = System.nanoTime();
-                    double frameMs = (frameEnd - frameStart) / 1_000_000.0;
-                    double sleepMs = FRAME_TIME_MS - frameMs;
+            if (totalCycles >= CYCLES_PER_FRAME) {
+                long frameEnd = System.nanoTime();
+                double frameMs = (frameEnd - frameStart) / 1_000_000.0;
+                double sleepMs = FRAME_TIME_MS - frameMs;
 
-                    if (sleepMs > 0) try {
-                        Thread.sleep((long) sleepMs);
-                        //Thread.sleep(100);
-                    } catch (InterruptedException ignored) {
-                    }
-                    totalCycles -= CYCLES_PER_FRAME;
-                    frameStart = System.nanoTime();
+                if (sleepMs > 0) try {
+                    Thread.sleep((long) sleepMs);
+                    //Thread.sleep(100);
+                } catch (InterruptedException ignored) {
                 }
+                totalCycles -= CYCLES_PER_FRAME;
+                frameStart = System.nanoTime();
             }
         }
     }
 
     private void tickTimers(int cycles) {
         if (!getMemory().isBootRomEnabled()) {
-            int divCheck = memory.readByte(map.get("DIV"));
-            int timaCheck = memory.readByte(map.get("TIMA"));
-            int tmaCheck = memory.readByte(map.get("TMA"));
-            int tacCheck = memory.readByte(map.get("TAC"));
-            boolean isTacEnabled = timer.isTacEnabled();
+//            int divCheck = memory.readByte(map.get("DIV"));
+//            int timaCheck = memory.readByte(map.get("TIMA"));
+//            int tmaCheck = memory.readByte(map.get("TMA"));
+//            int tacCheck = memory.readByte(map.get("TAC"));
+//            boolean isTacEnabled = timer.isTacEnabled();
 //            System.out.println("TAC is " + (isTacEnabled ? "ENABLED" : "DISABLED"));
 //            System.out.printf("\nDIV: %04X\nTIMA: %04X\nTMA: %04X\nTAC: %04X\n",
 //                    divCheck, timaCheck, tmaCheck, tacCheck);
@@ -131,11 +130,16 @@ public class CPU extends Thread {
 
         //TIMA
         if (timer.isTacEnabled()) {
-            int period = timer.getTacRate();
+            int freq = timer.getTacRate();
             timaCycleAcc += cycles;
-            while (timaCycleAcc >= period) {
-                timer.incTima();
-                timaCycleAcc -= period;
+            while (timaCycleAcc >= freq) {
+                boolean overflow = timer.incTima();
+                if(overflow){
+                    interrupt.setInterrupt(Interrupt.INTERRUPT.TIMER);
+                    timaCycleAcc = 0;
+                    break;
+                }
+                timaCycleAcc -= freq;
             }
         } else {
             timaCycleAcc = 0;
@@ -188,25 +192,36 @@ public class CPU extends Thread {
 
                     fetchedCb = false;
                     built = true;
-                    if(currentOpcodeObject.getFetchedAt() >= 0x0369
-                    && currentOpcodeObject.getFetchedAt() < 0x037E){
-                        System.out.println("state_24_copyright_load");
+
+
+
+                    if (currentOpcodeObject.getFetchedAt() > 0x0100) {
+                        FF = memory.readByteUnrestricted(0xFFA6);
+                        if(FFold != FF){
+                            //System.out.printf("%04X - FFA6 is %04X\n", currentOpcodeObject.getFetchedAt(), memory.readByteUnrestricted(0xFFA6));
+                            FFold = FF;
+                        }
+                    }
+
+                    if (currentOpcodeObject.getFetchedAt() >= 0x0369
+                            && currentOpcodeObject.getFetchedAt() < 0x037E) {
+                        //System.out.println("state_24_copyright_load");
 //                        int v = memory.readByte(0xFFE1);
 //                        System.out.printf("STATE: %04X\n", v);
                     }
 
-                    if(currentOpcodeObject.getFetchedAt() == 0x037E){
-                        System.out.println("state_24_copyright_load.loop_to_c400");
+                    if (currentOpcodeObject.getFetchedAt() == 0x037E) {
+                        //System.out.println("state_24_copyright_load.loop_to_c400");
 //                        int v = memory.readByte(0xFFE1);
 //                        System.out.printf("STATE: %04X\n", v);
                     }
 
-                    if(currentOpcodeObject.getFetchedAt() == 0x0393){
-                        System.out.println("state_25_copyright_wait");
+                    if (currentOpcodeObject.getFetchedAt() == 0x0393) {
+                        //System.out.println("state_25_copyright_wait");
                     }
 
-                    if(currentOpcodeObject.getFetchedAt() == 0x03A0){
-                        System.out.println("state_35_copyright_timeout");
+                    if (currentOpcodeObject.getFetchedAt() == 0x03A0) {
+                        //System.out.println("state_35_copyright_timeout");
                     }
 
                     //Skip over opcode and force PC to correct location if this isn't implemented yet
@@ -249,6 +264,30 @@ public class CPU extends Thread {
                     built = false;
                     state = CPUState.FETCH;
                     testStepComplete = true;
+
+
+                    int tima = timer.getTima();
+                    int tac = timer.getTac();
+                    int div = timer.getDiv();
+                    String interrupts = interrupt.getInterruptsAsString();
+                    if(currentOpcodeObject.getFetchedAt() == 0xC317){
+                        System.out.println();
+                    }
+
+//                    if (currentOpcodeObject.getFetchedAt() >= 0x0369) {
+//                        if (currentOpcodeObject.getOpcodeInfo().getMnemonic().equals("CALL")) {
+//                            System.out.printf("%04X - called CALL to %04X\n" +
+//                                            "New PC is %04X\n",
+//                                    currentOpcodeObject.getFetchedAt(), currentOpcodeObject.getSourceValue(),
+//                                    registers.getPC());
+//                        }
+//                        if (currentOpcodeObject.getOpcodeInfo().getMnemonic().equals("RET")) {
+//                            System.out.printf("%04X - called RET to %04X\n" +
+//                                            "New PC is %04X\n",
+//                                    currentOpcodeObject.getFetchedAt(), currentOpcodeObject.getSourceValue(),
+//                                    registers.getPC());
+//                        }
+//                    }
                 }
             }
         }

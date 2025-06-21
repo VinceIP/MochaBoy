@@ -48,6 +48,8 @@ public class Memory {
         address &= 0xFFFF;
 
         if (!cpu.isTestMode()) {
+
+
             //If reading from OAM
             if (address >= map.get("OAM_START") && address <= map.get("OAM_END")) {
                 if (oamBlocked) return 0xFF;
@@ -55,6 +57,17 @@ public class Memory {
 
             if (address >= map.get("VRAM_START") && address <= map.get("VRAM_END")) {
                 if (vramBlocked) return 0xFF;
+            }
+
+            if (address == map.get("JOYP")) {
+                int v = memory[address];
+                if ((v >> 4 == 3)) return 0x0F;
+            }
+
+            if (address == map.get("DIV")) {
+                if (!bootRomEnabled) {
+                    System.out.printf("");
+                }
             }
 
             if (bootRomEnabled && address <= 0x00FF) {
@@ -90,8 +103,8 @@ public class Memory {
         value = value & 0xFF;
         address = address & 0xFFFF;
 
-        if(address == 0xFFE1){
-            System.out.printf("%04X: Writing %02X to FFE1\n", cpu.getCurrentOpcodeObject().getFetchedAt(), value);
+        if (address == 0xFFE1) {
+            //System.out.printf("%04X: Writing %02X to FFE1\n", cpu.getCurrentOpcodeObject().getFetchedAt(), value);
         }
 
         if (ppu != null && !ppu.isLcdEnabled()) {
@@ -133,7 +146,6 @@ public class Memory {
             value = 0x00;
         }
 
-        // ----- Minimal no-link-cable emulation: handle 0xFF01 and 0xFF02 -----
         if (address == map.get("SB")) {
             memory[address] = (byte) value;
             lastWrite = new LastWrite(address, value, cpu.getCurrentOpcodeObject().getFetchedAt());
@@ -153,7 +165,10 @@ public class Memory {
             lastWrite = new LastWrite(address, value, cpu.getCurrentOpcodeObject().getFetchedAt());
             return;
         }
-        // --------------------------------------------------------------------
+
+        if (address == map.get("JOYP")) {
+            value = value & 0xF0;
+        }
 
 
         // Normal memory write for all other addresses
