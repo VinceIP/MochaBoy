@@ -24,14 +24,14 @@ public class StackOperation implements MicroOperation {
         int value = valueSupplier.get();
         switch (type) {
             case POP -> {
-                // 16-bit value read from [SP] was supplied by valueSupplier
-                opcode.setDestinationValue(value);     // <-- pass to FlagCalculator
+                opcode.setDestinationValue(value);     // pass to FlagCalculator
+
                 if ("AF".equals(opcode.getDestinationOperandString())) {
-                    r.setAFUnmasked(value);            // writes A and F (low nibble kept 0)
+                    r.setAF(value);
                 } else {
                     r.setByName(opcode.getDestinationOperandString(), value);
                 }
-                r.setSP((r.getSP() + 2) & 0xFFFF);     // advance SP for ALL pops
+                r.setSP((r.getSP() + 2) & 0xFFFF);
             }
 
             case PUSH_HIGH -> {
