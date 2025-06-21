@@ -9,6 +9,7 @@ import org.mochaboy.registers.Timer;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.SortedMap;
 
 public class CPU extends Thread {
     private PPU ppu;
@@ -110,7 +111,17 @@ public class CPU extends Thread {
     }
 
     private void tickTimers(int cycles) {
-        //DIV - 256 cycles per increment
+        if (!getMemory().isBootRomEnabled()) {
+            int divCheck = memory.readByte(map.get("DIV"));
+            int timaCheck = memory.readByte(map.get("TIMA"));
+            int tmaCheck = memory.readByte(map.get("TMA"));
+            int tacCheck = memory.readByte(map.get("TAC"));
+            boolean isTacEnabled = timer.isTacEnabled();
+//            System.out.println("TAC is " + (isTacEnabled ? "ENABLED" : "DISABLED"));
+//            System.out.printf("\nDIV: %04X\nTIMA: %04X\nTMA: %04X\nTAC: %04X\n",
+//                    divCheck, timaCheck, tmaCheck, tacCheck);
+        }
+
         //DIV - 256 cycles per increment
         divCycleAcc += cycles;
         while (divCycleAcc >= 256) {
@@ -118,11 +129,9 @@ public class CPU extends Thread {
             divCycleAcc -= 256;
         }
 
-        timer.update(cycles); // handle pending TIMA reloads
-
         //TIMA
         if (timer.isTacEnabled()) {
-            int period = timer.getTacPeriod();
+            int period = timer.getTacRate();
             timaCycleAcc += cycles;
             while (timaCycleAcc >= period) {
                 timer.incTima();
@@ -179,6 +188,26 @@ public class CPU extends Thread {
 
                     fetchedCb = false;
                     built = true;
+                    if(currentOpcodeObject.getFetchedAt() >= 0x0369
+                    && currentOpcodeObject.getFetchedAt() < 0x037E){
+                        System.out.println("state_24_copyright_load");
+//                        int v = memory.readByte(0xFFE1);
+//                        System.out.printf("STATE: %04X\n", v);
+                    }
+
+                    if(currentOpcodeObject.getFetchedAt() == 0x037E){
+                        System.out.println("state_24_copyright_load.loop_to_c400");
+//                        int v = memory.readByte(0xFFE1);
+//                        System.out.printf("STATE: %04X\n", v);
+                    }
+
+                    if(currentOpcodeObject.getFetchedAt() == 0x0393){
+                        System.out.println("state_25_copyright_wait");
+                    }
+
+                    if(currentOpcodeObject.getFetchedAt() == 0x03A0){
+                        System.out.println("state_35_copyright_timeout");
+                    }
 
                     //Skip over opcode and force PC to correct location if this isn't implemented yet
                     if (currentOpcodeObject.isUnimplError()) {

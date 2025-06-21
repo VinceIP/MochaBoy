@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 class SubroutineOpcodesTest {
@@ -183,6 +184,8 @@ class SubroutineOpcodesTest {
         memory.writeByteUnrestricted(0, 0xD9);
         while (!cpu.isTestStepComplete()) cpu.step();
         assertEquals(0x2211, cpu.getRegisters().getPC());
+        // RETI should re-enable interrupts immediately
+        assertTrue(cpu.isIME(), "RETI did not enable IME");
     }
 
     // RST x

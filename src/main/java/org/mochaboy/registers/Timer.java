@@ -24,11 +24,11 @@ public class Timer {
         int div = getDiv() & 0xFF;
         int address = map.get("DIV");
         div++;
-        memory.writeByte(map.get("DIV"), div & 0xFF);
+        memory.writeByteUnrestricted(address, div & 0xFF);
     }
 
     public void resetDiv() {
-        memory.writeByte(map.get("DIV"), 0x00);
+        memory.writeByteUnrestricted(map.get("DIV"), 0x00);
     }
 
     public void incTima() {
@@ -37,54 +37,45 @@ public class Timer {
             resetTima(0x00);
             overflowDelay = 1;
         } else {
-            memory.writeByte(map.get("TIMA"), (tima + 1) & 0xFF);
+            memory.writeByteUnrestricted(map.get("TIMA"), (tima + 1) & 0xFF);
         }
     }
 
     public int getTima() {
-        return memory.readByte(map.get("TIMA"));
+        return memory.readByteUnrestricted(map.get("TIMA"));
     }
 
     public void resetTima(int value) {
-        memory.writeByte(map.get("TIMA"), value & 0xFF);
+        memory.writeByteUnrestricted(map.get("TIMA"), value & 0xFF);
     }
 
     public int getTma() {
-        return memory.readByte(map.get("TMA"));
+        return memory.readByteUnrestricted(map.get("TMA"));
     }
 
     public int getTac() {
-        return memory.readByte(map.get("TAC"));
+        return memory.readByteUnrestricted(map.get("TAC"));
     }
 
 
     public boolean isTacEnabled() {
-        return (getTac() & 0x4) != 0;
+        return (getTac() & 0b100) != 0;
     }
 
-    public int getTacPeriod() {
+    public int getTacRate() {
         int tac = getTac() & 0x03;
         return switch (tac) {
-            case 0x00 -> 1024;
-            case 0x01 -> 16;
-            case 0x02 -> 64;
-            case 0x03 -> 256;
+            //In m-cycles
+            case 0x00 -> 256;
+            case 0x01 -> 4;
+            case 0x02 -> 16;
+            case 0x03 -> 64;
             default -> 0;
         };
     }
 
-    public void update(int cycles) {
-        if (overflowDelay > 0) {
-            overflowDelay -= cycles;
-            if (overflowDelay <= 0) {
-                resetTima(getTma());
-                interrupt.setInterrupt(Interrupt.INTERRUPT.TIMER);
-                overflowDelay = 0;
-            }
-        }
-    }
 
     public int getDiv() {
-        return memory.readByte(map.get("DIV"));
+        return memory.readByteUnrestricted(map.get("DIV"));
     }
 }

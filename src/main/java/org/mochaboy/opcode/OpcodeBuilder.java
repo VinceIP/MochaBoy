@@ -560,7 +560,7 @@ public class OpcodeBuilder {
                     }
                 }
                 opcodeObject.addOp(new ReadMemory8Bit(opcodeObject::setDestinationValue, () -> cpu.getRegisters().getSP()));
-                opcodeObject.addOp(new ReadMemory8Bit(opcodeObject::setSourceValue, () -> (cpu.getRegisters().getSP() + 1) & 0xFFFF));
+                opcodeObject.addOp(new ReadMemory8Bit(opcodeObject::setSourceValue, () -> ((cpu.getRegisters().getSP() + 1) & 0xFFFF)));
                 opcodeObject.addOp(
                         new MergeOperands(opcodeObject::getDestinationValue, opcodeObject::getSourceValue, opcodeObject::setSourceValue)
                 );
@@ -571,8 +571,11 @@ public class OpcodeBuilder {
                 );
 
                 if (opcodeObject.getOpcodeInfo().getMnemonic().equals("RETI")) {
-                    //SET IME HERE
+                    opcodeObject.addOp(
+                            new InterruptOperation(InterruptOperation.Type.EI_QUICK, cpu)
+                    );
                 }
+
             }
 
             case "RST" -> {

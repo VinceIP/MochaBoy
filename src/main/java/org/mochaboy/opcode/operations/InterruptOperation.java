@@ -22,6 +22,8 @@ public class InterruptOperation implements MicroOperation {
                 cpu.setPendingImeEnable(true);
             }
 
+            case EI_QUICK -> cpu.setIME(true);
+
             case HALT -> {
                 if (cpu.isIME()) {
                     cpu.setHalt(true);
@@ -33,7 +35,9 @@ public class InterruptOperation implements MicroOperation {
 
     @Override
     public int getCycles() {
-        return 1;
+        if (type != Type.EI_QUICK)
+            return 1;
+        else return 0;
     }
 
     @Override
@@ -44,6 +48,7 @@ public class InterruptOperation implements MicroOperation {
     public enum Type {
         DI,
         EI,
+        EI_QUICK,
         HALT
     }
 }

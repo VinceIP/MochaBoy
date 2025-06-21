@@ -90,6 +90,10 @@ public class Memory {
         value = value & 0xFF;
         address = address & 0xFFFF;
 
+        if(address == 0xFFE1){
+            System.out.printf("%04X: Writing %02X to FFE1\n", cpu.getCurrentOpcodeObject().getFetchedAt(), value);
+        }
+
         if (ppu != null && !ppu.isLcdEnabled()) {
             vramBlocked = false;
         }
@@ -151,10 +155,6 @@ public class Memory {
         }
         // --------------------------------------------------------------------
 
-        // If boot ROM is still enabled and address <= 0x00FF, skip writing
-        if (bootRomEnabled && address <= 0x00FF) {
-            return;
-        }
 
         // Normal memory write for all other addresses
         if (cpu != null) lastWrite = new LastWrite(address, value, cpu.getCurrentOpcodeObject().getFetchedAt());
