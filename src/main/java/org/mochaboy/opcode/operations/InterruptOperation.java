@@ -17,6 +17,7 @@ public class InterruptOperation implements MicroOperation {
         switch (type) {
             case DI -> {
                 cpu.setIME(false);
+                cpu.setPendingImeEnable(false);
             }
             case EI -> {
                 cpu.setPendingImeEnable(true);

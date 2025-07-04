@@ -48,6 +48,11 @@ public class Memory {
         address &= 0xFFFF;
 
         if (!cpu.isTestMode()) {
+            if (address == map.get("JOYP")) {
+//                int v = memory[address];
+//                if ((v >> 4 == 3)) return v & 0xFF;
+                return 0x1F;
+            }
 
 
             //If reading from OAM
@@ -58,12 +63,7 @@ public class Memory {
             if (address >= map.get("VRAM_START") && address <= map.get("VRAM_END")) {
                 if (vramBlocked) return 0xFF;
             }
-
-            if (address == map.get("JOYP")) {
-                int v = memory[address];
-                if ((v >> 4 == 3)) return 0x0F;
-            }
-
+            
             if (address == map.get("DIV")) {
                 if (!bootRomEnabled) {
                     System.out.printf("");
@@ -227,7 +227,7 @@ public class Memory {
     private void loadCart(Cartridge cartridge) {
         byte[] cartData = cartridge.getCartData();
 
-        System.arraycopy(cartData, 0x0000, memory, 0x0000, 0xFFFF / 2);
+        System.arraycopy(cartData, 0x0000, memory, 0x0000, 0x8000);
 
     }
 

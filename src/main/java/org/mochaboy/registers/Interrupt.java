@@ -40,7 +40,7 @@ public class Interrupt {
 
     public void handleInterrupt(INTERRUPT interrupt) {
         //if (!interrupt.name().equals("VBLANK")) {
-            System.out.println(interrupt.name());
+            //System.out.println(interrupt.name());
         //}
         cpu.getStack().push(cpu.getRegisters().getPC());
         cpu.getRegisters().setPC(interruptMap.get(interrupt.name()));

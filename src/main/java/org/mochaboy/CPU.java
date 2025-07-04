@@ -83,7 +83,7 @@ public class CPU extends Thread {
         state = CPUState.FETCH;
 
         while (running) {
-            int cycles = halt ? 0 : step(); //Step if not in HALT
+            int cycles = halt ? 1 : step(); //Step if not in HALT
 
             tickTimers(cycles);
             if (IME) serviceInterrupts(); //Check interrupts if enabled
@@ -134,7 +134,7 @@ public class CPU extends Thread {
             timaCycleAcc += cycles;
             while (timaCycleAcc >= freq) {
                 boolean overflow = timer.incTima();
-                if(overflow){
+                if (overflow) {
                     interrupt.setInterrupt(Interrupt.INTERRUPT.TIMER);
                     timaCycleAcc = 0;
                     break;
@@ -193,11 +193,13 @@ public class CPU extends Thread {
                     fetchedCb = false;
                     built = true;
 
-
+                    if(!memory.isBootRomEnabled()){
+                        //System.out.printf("%04X: JOYP is %04X\n", currentOpcodeObject.getFetchedAt(), memory.readByte(memory.getMemoryMap().get("JOYP")));
+                    }
 
                     if (currentOpcodeObject.getFetchedAt() > 0x0100) {
                         FF = memory.readByteUnrestricted(0xFFA6);
-                        if(FFold != FF){
+                        if (FFold != FF) {
                             //System.out.printf("%04X - FFA6 is %04X\n", currentOpcodeObject.getFetchedAt(), memory.readByteUnrestricted(0xFFA6));
                             FFold = FF;
                         }
@@ -270,8 +272,15 @@ public class CPU extends Thread {
                     int tac = timer.getTac();
                     int div = timer.getDiv();
                     String interrupts = interrupt.getInterruptsAsString();
-                    if(currentOpcodeObject.getFetchedAt() == 0xC317){
+                    if (currentOpcodeObject.getFetchedAt() == 0xC317) {
                         System.out.println();
+                    }
+
+                    if (!memory.isBootRomEnabled()) {
+                        int ff = memory.readByteUnrestricted(0xFFA6);
+                        if (ff != 0x0000 && ff != 0x00FA) {
+                            //System.out.printf("%04X - FFA6 = %04X\n", currentOpcodeObject.getFetchedAt(), ff);
+                        }
                     }
 
 //                    if (currentOpcodeObject.getFetchedAt() >= 0x0369) {
