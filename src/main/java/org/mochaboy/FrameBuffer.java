@@ -16,8 +16,13 @@ public class FrameBuffer {
         pixels[y * width + x] = color;
     }
 
-    public synchronized int[] getPixels(){
+    public synchronized int[] getPixels() {
         return pixels.clone();
+    }
+
+    public synchronized int getPixel(int x, int y) {
+        if (x < 0 || x >= width || y < 0 || y >= height) return 0;
+        else return pixels[y * width + x];
     }
 
     public int getWidth() {

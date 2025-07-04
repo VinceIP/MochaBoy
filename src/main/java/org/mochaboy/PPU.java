@@ -105,66 +105,100 @@ public class PPU {
         int lcdc = memory.readByteUnrestricted(memoryMap.get("LCDC"));
         int scx = memory.readByteUnrestricted(memoryMap.get("SCX"));
         int scy = memory.readByteUnrestricted(memoryMap.get("SCY"));
+        int wy = memory.readByteUnrestricted(memoryMap.get("WY"));
+        int wx = memory.readByteUnrestricted(memoryMap.get("WX")) - 7;
         int ly = memory.readByteUnrestricted(memoryMap.get("LY"));
         int bgp = memory.readByteUnrestricted(memoryMap.get("BGP"));
+        int obp0 = memory.readByteUnrestricted(memoryMap.get("OBP0"));
+        int obp1 = memory.readByteUnrestricted(memoryMap.get("OBP1"));
 
-        //if (!lcdEnabled || (lcdc & 0x01) == 0) return;
+        int[] lineColors = new int[160];
 
-//        System.out.println("drawScanline: LCDC = 0x" + String.format("%02X", lcdc));
-//        System.out.println("drawScanline: SCY = 0x" + String.format("%02X", scy));
-//        System.out.println("drawScanline: SCX = 0x" + String.format("%02X", scx));
-//        System.out.println("drawScanline: LY = 0x" + String.format("%02X", ly));
-//        System.out.println("drawScanline: BGP = 0x" + String.format("%02X", bgp));
-
-        int tileMapBase = ((lcdc & 0x08) != 0) ? 0x9C00 : 0x9800;
-        //int tileDataBase = ((lcdc & 0x10) != 0) ? 0x8000 : 0x9000;
-        int tileDataBase = 0x8000;
-
-        int tileRow = ((scy + ly) & 0xFF) >> 3;  // divide by 8
+        int bgTileMapBase = ((lcdc & 0x08) != 0) ? 0x9C00 : 0x9800;
+        int winTileMapBase = ((lcdc & 0x40) != 0) ? 0x9c00 : 0x9800;
+        int tileDataBase = ((lcdc & 0x10) != 0) ? 0x8000 : 0x9000;
 
         for (int pixel = 0; pixel < 160; pixel++) {
-            int tileCol = ((scx + pixel) & 0xFF) >> 3;
-            tileRow &= 31;
-            tileCol &= 31;
+            boolean window = ((lcdc & 0x20) != 0) && ly >= wy && pixel >= wx;
+            int tileMapBase = window ? winTileMapBase : bgTileMapBase;
+            int xOffset = window ? (pixel - wx) & 0xFF : (scx + pixel) & 0xFF;
+            int yOffset = window ? (ly - wy) & 0xFF : (scy + ly) & 0xFF;
+
+            int tileRow = (yOffset >> 3) & 31;
+            int tileCol = (xOffset >> 3) & 31;
             int tileAddress = tileMapBase + tileRow * 32 + tileCol;
             int tileNum = memory.readByteUnrestricted(tileAddress);
-            if (tileDataBase == 0x9000) tileNum = (byte) tileNum; //Sign data if in 8800 method
+            if (tileDataBase == 0x9000) tileNum = (byte) tileNum;
             int tileDataAddress = tileDataBase + tileNum * 16;
             tileDataAddress = 0x8000 | ((tileDataAddress - 0x8000) & 0x1FFF);
-            int tileY = ((scy + ly) & 0xFF) % 8;
+
+            int tileY = yOffset % 8;
             int tileData1 = memory.readByteUnrestricted((tileDataAddress + (tileY * 2)) & 0xFFFF);
             int tileData2 = memory.readByteUnrestricted((tileDataAddress + (tileY * 2) + 1) & 0xFFFF);
-
-            int tileX = ((scx + pixel) & 0xFF) % 8;
+            int tileX = xOffset % 8;
 
             int colorBitLow = (tileData1 >> (7 - tileX)) & 1;
             int colorBitHigh = (tileData2 >> (7 - tileX)) & 1;
-
             int colorIndex = (colorBitHigh << 1) | colorBitLow;
 
             int color = (bgp >> (colorIndex * 2)) & 0x03;
+            lineColors[pixel] = color;
+        }
 
-            int actualColor = getColor(color);
+        int spriteHeight = ((lcdc & 0x04) != 0) ? 16 : 8;
+        for (int i = 0; i < 40; i++) {
+            int oamAddr = 0xFE00 + i * 4;
+            int spriteX = memory.readByteUnrestricted(oamAddr) - 16;
+            int spriteY = memory.readByteUnrestricted(oamAddr + 1) - 8;
+            int tile = memory.readByteUnrestricted(oamAddr + 2);
+            int attr = memory.readByteUnrestricted(oamAddr + 3);
 
+            if (ly < spriteY || ly >= spriteY + spriteHeight) continue;
+
+            int line = ly - spriteY;
+            if ((attr & 0x40) != 0) line = spriteHeight - 1 - line;
+            if (spriteHeight == 16) {
+                tile &= 0xFE;
+                if (line >= 8) {
+                    tile += 1;
+                    line -= 8;
+                }
+            }
+
+            int tileDataAddress = 0x8000 + tile * 16;
+            int tileData1 = memory.readByteUnrestricted(tileDataAddress + line * 2);
+            int tileData2 = memory.readByteUnrestricted(tileDataAddress + line * 2 + 1);
+
+            for (int x = 0; x < 8; x++) {
+                int pixelX = spriteX + ((attr & 0x20) != 0 ? (7 - x) : x);
+                if (pixelX < 0 || pixelX >= 160) continue;
+
+                int low = (tileData1 >> (7 - x)) & 1;
+                int high = (tileData2 >> (7 - x)) & 1;
+                int index = (high << 1) | low;
+                if (index == 0) continue;
+
+                int palette = (attr & 0x10) != 0 ? obp1 : obp0;
+                int color = (palette >> (index * 2)) & 0x03;
+                lineColors[pixelX] = color;
+            }
+        }
+
+        for (int pixel = 0; pixel < 160; pixel++) {
+            int actualColor = getColor(lineColors[pixel]);
             frameBuffer.setPixel(pixel, ly, actualColor);
-
         }
 
     }
 
     private int getColor(int colorIndex) {
-        switch (colorIndex) {
-            case 0:
-                return 0xFFFFFFFF; // White
-            case 1:
-                return 0xFFC0C0C0; // Light Gray
-            case 2:
-                return 0xFF606060; // Dark Gray
-            case 3:
-                return 0xFF000000; // Black
-            default:
-                return 0xFF000000;
-        }
+        return switch (colorIndex) {
+            case 0 -> 0xFFFFFFFF; // White
+            case 1 -> 0xFFC0C0C0; // Light Gray
+            case 2 -> 0xFF606060; // Dark Gray
+            case 3 -> 0xFF000000; // Black
+            default -> 0xFF000000;
+        };
     }
 
     public int incrementLY() {
