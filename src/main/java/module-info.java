@@ -4,8 +4,6 @@ module org.mochaboy {
 
     requires java.desktop;
 
-    requires com.google.gson;
-
     requires static org.junit.jupiter.api;
     requires static org.junit.jupiter.params;
 

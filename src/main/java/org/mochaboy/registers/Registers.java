@@ -211,7 +211,8 @@ public class Registers {
     }
 
     public static boolean isValidRegister(CPU cpu, String s){
-        return cpu.getRegisters().registerGettersMap.get(s) != null;
+        //return cpu.getRegisters().registerGettersMap.get(s) != null;
+        return false;
     }
 
 }

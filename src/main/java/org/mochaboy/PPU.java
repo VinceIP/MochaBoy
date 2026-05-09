@@ -262,7 +262,7 @@ public class PPU {
         switch (ppuMode) {
             case HBLANK:
                 memory.setVramBlocked(false);
-                memory.setOamBlocked(true);
+                memory.setOamBlocked(false);
                 break;
             case VBLANK:
                 memory.setVramBlocked(false);

@@ -47,13 +47,6 @@ public class Memory {
     public int readByte(int address) {
         address &= 0xFFFF;
 
-        if (!cpu.isTestMode()) {
-            if (address == map.get("JOYP")) {
-//                int v = memory[address];
-//                if ((v >> 4 == 3)) return v & 0xFF;
-                return 0x1F;
-            }
-
 
             //If reading from OAM
             if (address >= map.get("OAM_START") && address <= map.get("OAM_END")) {
@@ -79,9 +72,6 @@ public class Memory {
             }
 
             return memory[address] & 0xFF;
-        } else {
-            return readByteUnrestricted(address);
-        }
     }
 
     public int readByteUnrestricted(int address) {
@@ -109,11 +99,6 @@ public class Memory {
 
         if (ppu != null && !ppu.isLcdEnabled()) {
             vramBlocked = false;
-        }
-
-        if (cpu.isTestMode()) {
-            writeByteUnrestricted(address, value);
-            return;
         }
 
         //If MBC = 0?
@@ -144,6 +129,9 @@ public class Memory {
         // Reset DIV if writing to DIV register
         else if (address == map.get("DIV")) {
             value = 0x00;
+            if(cpu!=null){
+                cpu.resetDivCycleAcc();
+            }
         }
 
         if (address == map.get("SB")) {

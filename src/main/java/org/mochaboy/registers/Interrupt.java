@@ -15,7 +15,7 @@ public class Interrupt {
     private final Map<String, Integer> interruptMap;
 
     public Interrupt(CPU cpu, Memory memory) {
-        this.cpu = cpu;
+        //this.cpu = cpu;
         this.memory = memory;
         map = this.memory.getMemoryMap();
         interruptMap = new HashMap<>();
@@ -35,16 +35,13 @@ public class Interrupt {
         int IF = memory.readByte(map.get("IF"));
         IF = (IF | (1 << bit));
         memory.writeByte(map.get("IF"), IF);
-        cpu.setHalt(false);
+        //cpu.setHalt(false);
     }
 
     public void handleInterrupt(INTERRUPT interrupt) {
-        //if (!interrupt.name().equals("VBLANK")) {
-            //System.out.println(interrupt.name());
-        //}
-        cpu.getStack().push(cpu.getRegisters().getPC());
-        cpu.getRegisters().setPC(interruptMap.get(interrupt.name()));
-        cpu.setIME(false);
+        //cpu.getStack().push(cpu.getRegisters().getPC());
+        //cpu.getRegisters().setPC(interruptMap.get(interrupt.name()));
+        //cpu.setIME(false);
     }
 
     public enum INTERRUPT {
